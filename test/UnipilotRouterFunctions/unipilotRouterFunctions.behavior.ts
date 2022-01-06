@@ -28,6 +28,29 @@ export async function shouldBehaveLikeUnipilotRouterFunctions(
     ).to.be.revertedWith("NA");
   });
 
+  it("Deposit: it should be fail  reason: 0 amount of token0 ", async () => {
+    let _vault: String = "0x0000000000000000000000000000000000000001";
+    await expect(
+      UnipilotRouter.connect(owner).deposit(
+        _vault,
+        owner.address,
+        parseUnits("0", "18"),
+        parseUnits("1000", "18"),
+      ),
+    ).to.be.revertedWith("IF");
+  });
+  it("Deposit: it should be fail  reason: 0 amount of token1 !!", async () => {
+    let _vault: String = "0x0000000000000000000000000000000000000001";
+    await expect(
+      UnipilotRouter.connect(owner).deposit(
+        _vault,
+        owner.address,
+        parseUnits("1000", "18"),
+        parseUnits("0", "18"),
+      ),
+    ).to.be.revertedWith("IF");
+  });
+
   it("Deposit: it should be pass", async () => {
     const vaultStatic = await UnipilotFactory.connect(
       owner,
@@ -49,36 +72,15 @@ export async function shouldBehaveLikeUnipilotRouterFunctions(
       "PILOT-USDT",
     );
 
-    // console.log(
-    //   "Token o Alice Balance : ",
-    //   await PILOT.balanceOf(owner.address),
-    // );
-
     await PILOT.connect(owner).approve(UnipilotRouter.address, MaxUint256);
     await USDT.connect(owner).approve(UnipilotRouter.address, MaxUint256);
 
-    console.log("Approve done");
-
-    // console.log(
-    //   "Allowance pilot",
-    //   await PILOT.allowance(owner.address, UnipilotRouter.address),
-    // );
-
-    // let staticCall = await UnipilotRouter.connect(owner).callStatic.deposit(
-    //   UnipilotVault.address,
-    //   alice.address,
+    // let staticDeposit = await UnipilotRouter.connect(owner).callStatic.deposit(
+    //   vaultStatic._vault,
+    //   owner.address,
     //   parseUnits("1000", "18"),
     //   parseUnits("1", "6"),
     // );
-
-    let staticDeposit = await UnipilotRouter.connect(owner).callStatic.deposit(
-      vaultStatic._vault,
-      owner.address,
-      parseUnits("1000", "18"),
-      parseUnits("1", "6"),
-    );
-
-    console.log("Lp Share", staticDeposit.toString());
 
     let deposit = await UnipilotRouter.connect(owner).deposit(
       vaultStatic._vault,
