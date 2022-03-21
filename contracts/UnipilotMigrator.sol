@@ -573,7 +573,7 @@ contract UnipilotMigrator is
             if (params.refundAsETH && params.token1 == WETH) {
                 unwrapWETH9(0, _msgSender());
             } else {
-                (params.token1, 0, _msgSender());
+                sweepToken(params.token1, 0, _msgSender());
             }
         }
     }
