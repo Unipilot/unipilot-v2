@@ -24,13 +24,14 @@ import {
   deployPassiveFactory,
   deployStrategy,
 } from "../stubs";
-import { shouldBehaveLikePassiveLive } from "./mainnetForkPassive.behavior";
 import { generateFeeThroughSwap } from "../utils/SwapFunction/swap";
+import { parse } from "path";
 
 export async function shouldBehaveLikeActiveLive(): Promise<void> {
   const createFixtureLoader = waffle.createFixtureLoader;
   let uniswapV3Factory: Contract;
   let uniswapV3PositionManager: NonfungiblePositionManager;
+  let uniswapPool: UniswapV3Pool;
   let uniStrategy: Contract;
   let unipilotFactory: UnipilotActiveFactory;
   let swapRouter: Contract;
@@ -62,7 +63,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
         {
           forking: {
             jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.FORK}`,
-            blockNumber: 12724774,
+            blockNumber: 13724774,
           },
         },
       ],
@@ -112,6 +113,11 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       ["0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35"],
       [1800],
     );
+
+    uniswapPool = (await ethers.getContractAt(
+      "UniswapV3Pool",
+      "0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35",
+    )) as UniswapV3Pool;
 
     await unipilotFactory
       .connect(owner)
@@ -193,6 +199,33 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       .withdraw(liquidity, owner.address, false);
     console.log("Tx hash", tx.hash);
     expect(await unipilotVault.balanceOf(owner.address)).to.be.equal(0);
+  });
+
+  it("Should Readjust after pull liquidity", async () => {
+    await unipilotVault
+      .connect(owner)
+      .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
+    let liquidity = await unipilotVault.balanceOf(owner.address);
+    console.log(liquidity);
+
+    await unipilotVault.connect(owner).pullLiquidity(owner.address);
+
+    let positionDetails = await unipilotVault.callStatic.getPositionDetails();
+
+    let reserveBeforeReAdjust =
+      positionDetails[0].lte(parseUnits("0", "6")) &&
+      positionDetails[0].lte(parseUnits("1", "6"));
+
+    await unipilotVault.connect(owner).readjustLiquidity();
+
+    positionDetails = await unipilotVault.callStatic.getPositionDetails();
+    // console.log(
+    //   "PositionDetails",
+    //   await unipilotVault.callStatic.getPositionDetails(),
+    // );
+
+    let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
+    expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
   });
 
   // shouldBehaveLikePassiveLive();

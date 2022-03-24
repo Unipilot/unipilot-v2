@@ -17,34 +17,36 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
     using UniswapPoolActions for IUniswapV3Pool;
     using UniswapLiquidityManagement for IUniswapV3Pool;
 
-    IERC20 private token0;
-    IERC20 private token1;
+    IERC20 private immutable token0;
+    IERC20 private immutable token1;
+    uint24 private immutable fee;
+    int24 private immutable tickSpacing;
+
+    TicksData public ticksData;
     IUniswapV3Pool private pool;
     IUnipilotFactory private unipilotFactory;
 
     address private WETH;
-    TicksData public ticksData;
-    int24 private tickSpacing;
-    uint8 private _unlocked = 1;
-    uint8 private _pulled = 1;
-    uint24 private fee;
+    uint32 private _pulled = 1;
+    uint32 private _unlocked = 1;
+    uint32 private _initialized = 1;
 
     mapping(address => bool) private _operatorApproved;
 
     modifier onlyGovernance() {
         (address governance, , , , ) = getProtocolDetails();
-        require(msg.sender == governance, "NA");
+        require(msg.sender == governance);
         _;
     }
 
     modifier onlyOperator() {
-        require(_operatorApproved[msg.sender], "NO");
+        require(_operatorApproved[msg.sender]);
         _;
     }
 
     modifier nonReentrant() {
-        require(_unlocked == 1, "Reentrancy");
-        _unlocked = 0;
+        require(_unlocked == 1);
+        _unlocked = 2;
         _;
         _unlocked = 1;
     }
@@ -73,7 +75,13 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         _operatorApproved[governance] = true;
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     function init() external onlyGovernance {
+        require(_initialized == 1);
+        _initialized = 2;
         int24 _tickSpacing = tickSpacing;
         int24 baseThreshold = _tickSpacing * getBaseThreshold();
         (, int24 currentTick, ) = pool.getSqrtRatioX96AndTick();
@@ -100,14 +108,16 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         external
         payable
         override
+        nonReentrant
         returns (
             uint256 lpShares,
             uint256 amount0,
             uint256 amount1
         )
     {
-        address sender = _msgSender();
+        require(amount0Desired > 0 && amount1Desired > 0);
 
+        address sender = _msgSender();
         (lpShares, amount0, amount1) = pool.computeLpShares(
             true,
             amount0Desired,
@@ -130,7 +140,9 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
             );
         }
 
-        refundETH();
+        if (address(this).balance > 0)
+            TransferHelper.safeTransferETH(msg.sender, address(this).balance);
+
         _mint(recipient, lpShares);
         emit Deposit(sender, recipient, amount0, amount1, lpShares);
     }
@@ -145,7 +157,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
-        require(liquidity > 0, "AS");
+        require(liquidity > 0);
         uint256 totalSupply = totalSupply();
 
         /// @dev if liquidity has pulled in contract then calculate share accordingly
@@ -210,13 +222,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         }
     }
 
-    function readjustLiquidity()
-        external
-        override
-        // nonReentrant
-        onlyOperator
-    // checkDeviation
-    {
+    function readjustLiquidity() external override onlyOperator checkDeviation {
         _pulled = 1;
         ReadjustVars memory a;
 
@@ -331,7 +337,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
     ) external override {
         _verifyCallback();
 
-        require(amount0 > 0 || amount1 > 0, "AS");
+        require(amount0 > 0 || amount1 > 0);
         bool zeroForOne = abi.decode(data, (bool));
 
         if (zeroForOne)
@@ -340,7 +346,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
     }
 
     function pullLiquidity(address recipient) external onlyOperator {
-        require(unipilotFactory.isWhitelist(recipient), "NW");
+        require(unipilotFactory.isWhitelist(recipient));
 
         pool.burnLiquidity(
             ticksData.baseTickLower,
@@ -399,7 +405,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
 
     /// @notice Verify that caller should be the address of a valid Uniswap V3 Pool
     function _verifyCallback() internal view {
-        require(msg.sender == address(pool), "NA");
+        require(msg.sender == address(pool));
     }
 
     function getBaseThreshold() internal view returns (int24 baseThreshold) {
@@ -444,15 +450,6 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         );
     }
 
-    /// should be remove
-    function getPoolDetails()
-        external
-        view
-        returns (uint160 sqrtRatioX96, int24 tick)
-    {
-        (sqrtRatioX96, tick, ) = pool.getSqrtRatioX96AndTick();
-    }
-
     function transferFunds(
         bool refundAsETH,
         address recipient,
@@ -460,7 +457,8 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         uint256 amount
     ) internal {
         if (refundAsETH && token == WETH) {
-            unwrapWETH9(amount, recipient);
+            IWETH9(WETH).withdraw(amount);
+            TransferHelper.safeTransferETH(recipient, amount);
         } else {
             TransferHelper.safeTransfer(token, recipient, amount);
         }
@@ -488,24 +486,4 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
             TransferHelper.safeTransferFrom(token, payer, recipient, value);
         }
     }
-
-    /// @notice Unwraps the contract's WETH9 balance and sends it to recipient as ETH.
-    /// @param balanceWETH9 The amount of WETH9 to unwrap
-    /// @param recipient The address receiving ETH
-    function unwrapWETH9(uint256 balanceWETH9, address recipient) internal {
-        IWETH9(WETH).withdraw(balanceWETH9);
-        TransferHelper.safeTransferETH(recipient, balanceWETH9);
-    }
-
-    /// @notice Refunds any ETH balance held by this contract to the `msg.sender`
-    /// @dev Useful for bundling with mint or increase liquidity that uses ether, or exact output swaps
-    /// that use ether for the input amount
-    function refundETH() internal {
-        if (address(this).balance > 0)
-            TransferHelper.safeTransferETH(msg.sender, address(this).balance);
-    }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 }
