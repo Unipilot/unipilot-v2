@@ -211,18 +211,22 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     await unipilotVault.connect(owner).pullLiquidity(owner.address);
 
     let positionDetails = await unipilotVault.callStatic.getPositionDetails();
+    console.log(
+      "PositionDetails",
+      await unipilotVault.callStatic.getPositionDetails(),
+    );
 
     let reserveBeforeReAdjust =
-      positionDetails[0].lte(parseUnits("0", "6")) &&
+      positionDetails[0].gte(parseUnits("0", "6")) &&
       positionDetails[0].lte(parseUnits("1", "6"));
 
     await unipilotVault.connect(owner).readjustLiquidity();
 
     positionDetails = await unipilotVault.callStatic.getPositionDetails();
-    // console.log(
-    //   "PositionDetails",
-    //   await unipilotVault.callStatic.getPositionDetails(),
-    // );
+    console.log(
+      "PositionDetails",
+      await unipilotVault.callStatic.getPositionDetails(),
+    );
 
     let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
     expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
