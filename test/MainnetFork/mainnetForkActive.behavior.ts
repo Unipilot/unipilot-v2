@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 import { expect } from "chai";
-import { BigNumber, Contract, ContractFactory } from "ethers";
+import { Contract, ContractFactory } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { MaxUint256 } from "@ethersproject/constants";
 import { ethers, waffle } from "hardhat";
@@ -9,23 +9,21 @@ import { encodePriceSqrt } from "../utils/encodePriceSqrt";
 import {
   UniswapV3Pool,
   NonfungiblePositionManager,
-  UnipilotPassiveVault,
   UnipilotActiveFactory,
-  UnipilotPassiveFactory,
   UnipilotActiveVault,
 } from "../../typechain";
 import ERC20Artifact from "../../artifacts/contracts/test/ERC20.sol/ERC20.json";
 import WETH9Artifact from "uniswap-v3-deploy-plugin/src/util/WETH9.json";
-// import SwapRouter from "../../artifacts/contracts/test/SwapRouter.sol/SwapRouter.json";
 
-import SwapRouterArtifact from "../utils/MainnetSwapRouterJson/SwapRouter.json";
+// import SwapRouterArtifact from "../utils/MainnetSwapRouterJson/SwapRouter.json";
+import SwapRouterArtifact from "../../artifacts/contracts/test/SwapRouter.sol/SwapRouter.json";
 import {
   deployActiveFactory,
   deployPassiveFactory,
   deployStrategy,
 } from "../stubs";
 import { generateFeeThroughSwap } from "../utils/SwapFunction/swap";
-import { parse } from "path";
+import { string } from "hardhat/internal/core/params/argumentTypes";
 
 export async function shouldBehaveLikeActiveLive(): Promise<void> {
   const createFixtureLoader = waffle.createFixtureLoader;
@@ -94,7 +92,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
 
     swapRouter = await ethers.getContractAt(
       SwapRouterArtifact.abi,
-      "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+      "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     );
 
     uniStrategy = await deployStrategy(owner);
@@ -165,14 +163,9 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     console.log("wbtcUSDC vault", wbtcUSDCVault);
   });
   it("Should be deposit", async () => {
-    let tx = await unipilotVault.connect(owner).deposit(
-      parseUnits("1", "8"),
-      parseUnits("40000", "6"),
-      owner.address,
-      //  {
-      //   value: parseUnits("1", "18"),
-      // }
-    );
+    let tx = await unipilotVault
+      .connect(owner)
+      .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
     console.log("Tx hash", tx.hash);
     expect(await unipilotVault.balanceOf(owner.address)).to.be.gt(0);
   });
@@ -180,8 +173,6 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     await unipilotVault
       .connect(owner)
       .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
-
-    await generateFeeThroughSwap(swapRouter, owner, WBTC, USDC, "1000");
 
     let tx = await unipilotVault.connect(owner).readjustLiquidity();
     console.log("Tx hash", tx.hash);
@@ -211,10 +202,6 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     await unipilotVault.connect(owner).pullLiquidity(owner.address);
 
     let positionDetails = await unipilotVault.callStatic.getPositionDetails();
-    console.log(
-      "PositionDetails",
-      await unipilotVault.callStatic.getPositionDetails(),
-    );
 
     let reserveBeforeReAdjust =
       positionDetails[0].gte(parseUnits("0", "6")) &&
@@ -223,13 +210,76 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     await unipilotVault.connect(owner).readjustLiquidity();
 
     positionDetails = await unipilotVault.callStatic.getPositionDetails();
-    console.log(
-      "PositionDetails",
-      await unipilotVault.callStatic.getPositionDetails(),
-    );
 
     let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
     expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
+  });
+
+  it("Pool should out of range then earn fees after rebalance ", async () => {
+    await unipilotVault
+      .connect(owner)
+      .deposit(parseUnits("0.5", "8"), parseUnits("200", "6"), owner.address);
+    let liquidity = await unipilotVault.balanceOf(owner.address);
+    console.log("LP balance of user is : ", liquidity);
+
+    console.log("Balance before Swaps", {
+      USDC: await USDC.balanceOf(owner.address),
+      WBTC: await WBTC.balanceOf(owner.address),
+    });
+
+    await generateFeeThroughSwap(
+      swapRouter,
+      owner,
+      USDC,
+      WBTC,
+      (500000).toString(),
+    );
+
+    let FeesBeforeSwap = { fees0: "", fees1: "" };
+    let FeesAfterSwap = { fees0: "", fees1: "" };
+    for (let i = 0; i < 10; i++) {
+      await generateFeeThroughSwap(
+        swapRouter,
+        owner,
+        WBTC,
+        USDC,
+        (1).toString(),
+      );
+      let PositionDetails = await unipilotVault.callStatic.getPositionDetails();
+      let obj = {
+        fees0: PositionDetails.fees0.toString(),
+        fees1: PositionDetails.fees1.toString(),
+      };
+      console.log(`***On the swap of ${i + 1} fees are`, obj);
+      if (obj.fees0 === "0") {
+        FeesBeforeSwap = obj;
+        console.log(
+          "******** Pool is out of range, so rebalance using fee1 ********",
+        );
+        await unipilotVault.connect(owner).readjustLiquidity();
+        console.log("Swap USDC to WBTC ");
+
+        await generateFeeThroughSwap(
+          swapRouter,
+          owner,
+          USDC,
+          WBTC,
+          (100).toString(),
+        );
+      }
+      FeesAfterSwap = obj;
+    }
+
+    console.log("Balance After Swaps", {
+      USDC: await USDC.balanceOf(owner.address),
+      WBTC: await WBTC.balanceOf(owner.address),
+    });
+
+    let status =
+      FeesBeforeSwap.fees0 < FeesAfterSwap.fees0 &&
+      FeesBeforeSwap.fees1 > "0" &&
+      FeesBeforeSwap.fees1 < FeesAfterSwap.fees1;
+    expect(status).to.be.true;
   });
 
   // shouldBehaveLikePassiveLive();
