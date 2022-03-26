@@ -70,6 +70,10 @@ const config: HardhatUserConfig = {
         mnemonic,
       },
       chainId: chainIds.hardhat,
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyapiKey}`,
+        blockNumber: 13724774,
+      },
     },
 
     goerli: createTestnetConfig("goerli"),
