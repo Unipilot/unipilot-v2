@@ -11,6 +11,7 @@ import "./libraries/UniswapLiquidityManagement.sol";
 import "./libraries/UniswapPoolActions.sol";
 
 import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
+import "hardhat/console.sol";
 
 contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
     using LowGasSafeMath for uint256;
@@ -157,69 +158,62 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
-        require(liquidity > 0);
-        uint256 totalSupply = totalSupply();
+        // require(liquidity > 0);
+        // uint256 totalSupply = totalSupply();
+        // /// @dev if liquidity has pulled in contract then calculate share accordingly
+        // if (_pulled == 1) {
+        //     uint256 liquidityShare = FullMath.mulDiv(
+        //         liquidity,
+        //         1e18,
+        //         totalSupply
+        //     );
+        //     (amount0, amount1) = pool.burnUserLiquidity(
+        //         ticksData.baseTickLower,
+        //         ticksData.baseTickUpper,
+        //         liquidityShare,
+        //         address(this)
+        //     );
+        //     (uint256 fees0, uint256 fees1) = pool.collectPendingFees(
+        //         address(this),
+        //         ticksData.baseTickLower,
+        //         ticksData.baseTickUpper
+        //     );
+        //     transferFeesToIF(false, fees0, fees1);
+        // }
+        // uint256 unusedAmount0 = FullMath.mulDiv(
+        //     _balance0().sub(amount0),
+        //     liquidity,
+        //     totalSupply
+        // );
+        // uint256 unusedAmount1 = FullMath.mulDiv(
+        //     _balance1().sub(amount1),
+        //     liquidity,
+        //     totalSupply
+        // );
+        // amount0 = amount0.add(unusedAmount0);
+        // amount1 = amount1.add(unusedAmount1);
+        // if (amount0 > 0) {
+        //     transferFunds(refundAsETH, recipient, address(token0), amount0);
+        // }
+        // if (amount1 > 0) {
+        //     transferFunds(refundAsETH, recipient, address(token1), amount1);
+        // }
+        // _burn(msg.sender, liquidity);
+        // emit Withdraw(recipient, liquidity, amount0, amount1);
+        // if (_pulled == 1) {
+        //     (uint256 c0, uint256 c1) = pool.mintLiquidity(
+        //         ticksData.baseTickLower,
+        //         ticksData.baseTickUpper,
+        //         _balance0(),
+        //         _balance1()
+        //     );
+        //     emit CompoundFees(c0, c1);
+        // }
+    }
 
-        /// @dev if liquidity has pulled in contract then calculate share accordingly
-        if (_pulled == 1) {
-            uint256 liquidityShare = FullMath.mulDiv(
-                liquidity,
-                1e18,
-                totalSupply
-            );
-
-            (amount0, amount1) = pool.burnUserLiquidity(
-                ticksData.baseTickLower,
-                ticksData.baseTickUpper,
-                liquidityShare,
-                address(this)
-            );
-
-            (uint256 fees0, uint256 fees1) = pool.collectPendingFees(
-                address(this),
-                ticksData.baseTickLower,
-                ticksData.baseTickUpper
-            );
-
-            transferFeesToIF(false, fees0, fees1);
-        }
-
-        uint256 unusedAmount0 = FullMath.mulDiv(
-            _balance0().sub(amount0),
-            liquidity,
-            totalSupply
-        );
-
-        uint256 unusedAmount1 = FullMath.mulDiv(
-            _balance1().sub(amount1),
-            liquidity,
-            totalSupply
-        );
-
-        amount0 = amount0.add(unusedAmount0);
-        amount1 = amount1.add(unusedAmount1);
-
-        if (amount0 > 0) {
-            transferFunds(refundAsETH, recipient, address(token0), amount0);
-        }
-
-        if (amount1 > 0) {
-            transferFunds(refundAsETH, recipient, address(token1), amount1);
-        }
-
-        _burn(msg.sender, liquidity);
-        emit Withdraw(recipient, liquidity, amount0, amount1);
-
-        if (_pulled == 1) {
-            (uint256 c0, uint256 c1) = pool.mintLiquidity(
-                ticksData.baseTickLower,
-                ticksData.baseTickUpper,
-                _balance0(),
-                _balance1()
-            );
-
-            emit CompoundFees(c0, c1);
-        }
+    function getCurrentTick() external returns (int24) {
+        (, int24 currentTick, ) = pool.getSqrtRatioX96AndTick();
+        return currentTick;
     }
 
     function readjustLiquidity() external override onlyOperator checkDeviation {
@@ -242,6 +236,7 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
 
         int24 baseThreshold = getBaseThreshold();
         (, a.currentTick, ) = pool.getSqrtRatioX96AndTick();
+        console.log("a.currentTick", uint24(a.currentTick));
 
         (a.tickLower, a.tickUpper) = UniswapLiquidityManagement.getBaseTicks(
             a.currentTick,
@@ -305,6 +300,9 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
                 baseThreshold,
                 tickSpacing
             );
+
+        console.log("ticksData.baseTickLower", uint24(ticksData.baseTickLower));
+        console.log("ticksData.baseTickUpper", uint24(ticksData.baseTickUpper));
 
         pool.mintLiquidity(
             ticksData.baseTickLower,
