@@ -36,6 +36,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   let wbtcUSDC: ContractFactory;
   let wbtcWeth1: ContractFactory;
   let wbtcWeth2: ContractFactory;
+  let wethUsdt: ContractFactory;
   let wbtcUSDCVault: string;
   let wbtcWethVault1: string;
   let wbtcWethVault2: string;
@@ -51,6 +52,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   let unipilotVault1: UnipilotActiveVault; // WBTC-USDC-3000
   let unipilotVault2: UnipilotActiveVault; //WBTC-WETH-500
   let unipilotVault3: UnipilotActiveVault; //WBTC-WETH-3000
+  let unipilotVault4: UnipilotActiveVault; //ETH-USDT-3000
   let owner: any;
 
   const encodedPriceWbtcUsdc = encodePriceSqrt(
@@ -61,6 +63,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     parseUnits("1", "8"),
     parseUnits("14.212", "18"),
   );
+  const encodedPrice2 = encodePriceSqrt(1, 3120);
 
   beforeEach("Fork Begin", async () => {
     await hre.network.provider.request({
@@ -98,6 +101,11 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     );
 
+    USDT = await ethers.getContractAt(
+      ERC20Artifact.abi,
+      "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    );
+
     WETH = await ethers.getContractAt(
       WETH9Artifact.abi,
       "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -125,8 +133,9 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
         "0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35", //WBTC-USDC-3000
         "0x4585FE77225b41b697C938B018E2Ac67Ac5a20c0", //WBTC-WETH-500
         "0xCBCdF9626bC03E24f779434178A73a0B4bad62eD", //WBTC-WETH-3000
+        "0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36", //ETH-USDT-3000
       ],
-      [27, 22, 10],
+      [27, 22, 10, 28],
     );
 
     uniswapPool = (await ethers.getContractAt(
@@ -167,6 +176,23 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
         "WBTC-WETH",
       );
 
+    await unipilotFactory
+      .connect(owner)
+      .createVault(
+        WETH.address,
+        USDT.address,
+        "3000",
+        encodedPrice2,
+        "WETH-USDT-3000",
+        "WETH-USDT",
+      );
+
+    const WethUsdtVault = await unipilotFactory.vaults(
+      WETH.address,
+      USDT.address,
+      "3000",
+    );
+
     wbtcWethVault1 = await unipilotFactory.vaults(
       WBTC.address,
       WETH.address,
@@ -188,14 +214,22 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     wbtcUSDC = await ethers.getContractFactory("UnipilotActiveVault");
     wbtcWeth1 = await ethers.getContractFactory("UnipilotActiveVault");
     wbtcWeth2 = await ethers.getContractFactory("UnipilotActiveVault");
+    wethUsdt = await ethers.getContractFactory("UnipilotActiveVault");
+    const wethUsdtVaultInstance = await ethers.getContractFactory(
+      "UnipilotActiveVault",
+    );
 
     unipilotVault1 = wbtcUSDC.attach(wbtcUSDCVault) as UnipilotActiveVault;
     unipilotVault2 = wbtcWeth1.attach(wbtcWethVault1) as UnipilotActiveVault;
     unipilotVault3 = wbtcWeth2.attach(wbtcWethVault2) as UnipilotActiveVault;
+    unipilotVault4 = wethUsdtVaultInstance.attach(
+      WethUsdtVault,
+    ) as UnipilotActiveVault;
 
     await unipilotVault1.connect(owner).init();
     await unipilotVault2.connect(owner).init();
     await unipilotVault3.connect(owner).init();
+    await unipilotVault4.connect(owner).init();
 
     await WBTC.connect(owner).approve(unipilotVault1.address, MaxUint256);
     await USDC.connect(owner).approve(unipilotVault1.address, MaxUint256);
@@ -205,6 +239,9 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
 
     await WBTC.connect(owner).approve(unipilotVault3.address, MaxUint256);
     await WETH.connect(owner).approve(unipilotVault3.address, MaxUint256);
+
+    await WETH.connect(owner).approve(unipilotVault4.address, MaxUint256);
+    await USDT.connect(owner).approve(unipilotVault4.address, MaxUint256);
 
     await WETH.connect(owner).approve(swapRouter.address, MaxUint256);
     await USDC.connect(owner).approve(swapRouter.address, MaxUint256);
@@ -235,6 +272,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     console.log("WBTC-USDC-3000", unipilotVault1.address);
     console.log("WBTC-WETH-500", unipilotVault2.address);
     console.log("WBTC-WETH-3000", unipilotVault3.address);
+    console.log("USDT-WETH-3000", unipilotVault4.address);
   });
 
   it("Should be deposit", async () => {
@@ -532,5 +570,153 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       amounts.amount1 >= parseUnits("1346.820502673353853014", "18");
 
     expect(status).to.be.true;
+  });
+
+  it("ETH-USDT-3000: All tests of ETH/USDT", async () => {
+    // set the initial ratio of vault equal to uniswap pool
+    await unipilotVault4
+      .connect(owner)
+      .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), owner.address, {
+        value: parseUnits("1", "18"),
+      });
+
+    // verify liquidity should be added in uniswap
+    var reserves = await unipilotVault4.callStatic.getPositionDetails();
+    // console.log("res before-> ", reserves);
+
+    // readjust the liquidity to consume all amount of vault
+    await unipilotVault4.connect(owner).readjustLiquidity();
+    // var reserves = await unipilotVault4.callStatic.getPositionDetails();
+
+    // fetch new account for adding liquidity in Unipilot
+    const [user0, user1, user2, user3, user4] = waffle.provider.getWallets();
+
+    // send amount0 & amount1 from existing account to new accounts
+    await owner.sendTransaction({
+      to: user0.address,
+      value: parseUnits("1", "18"),
+    });
+
+    await owner.sendTransaction({
+      to: user1.address,
+      value: parseUnits("1", "18"),
+    });
+
+    await owner.sendTransaction({
+      to: user2.address,
+      value: parseUnits("5", "18"),
+    });
+
+    await owner.sendTransaction({
+      to: user3.address,
+      value: parseUnits("10", "18"),
+    });
+
+    await owner.sendTransaction({
+      to: user4.address,
+      value: parseUnits("16", "18"),
+    });
+
+    await USDT.connect(owner).transfer(user0.address, parseUnits("5000", "6"));
+    await USDT.connect(owner).transfer(user1.address, parseUnits("6000", "6"));
+    await USDT.connect(owner).transfer(user2.address, parseUnits("8000", "6"));
+    await USDT.connect(owner).transfer(user3.address, parseUnits("11000", "6"));
+    await USDT.connect(owner).transfer(user4.address, parseUnits("19000", "6"));
+
+    await USDT.connect(user0).approve(unipilotVault4.address, MaxUint256);
+    await USDT.connect(user1).approve(unipilotVault4.address, MaxUint256);
+    await USDT.connect(user2).approve(unipilotVault4.address, MaxUint256);
+    await USDT.connect(user3).approve(unipilotVault4.address, MaxUint256);
+    await USDT.connect(user4).approve(unipilotVault4.address, MaxUint256);
+
+    // now add liquidity from all new accounts
+    await unipilotVault4
+      .connect(user0)
+      .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), user0.address, {
+        value: parseUnits("1", "18"),
+      });
+
+    await unipilotVault4
+      .connect(user1)
+      .deposit(parseUnits("1", "18"), parseUnits("6000", "6"), user1.address, {
+        value: parseUnits("1", "18"),
+      });
+
+    await unipilotVault4
+      .connect(user2)
+      .deposit(parseUnits("5", "18"), parseUnits("8000", "6"), user2.address, {
+        value: parseUnits("5", "18"),
+      });
+
+    await unipilotVault4
+      .connect(user3)
+      .deposit(
+        parseUnits("10", "18"),
+        parseUnits("11000", "6"),
+        user3.address,
+        {
+          value: parseUnits("10", "18"),
+        },
+      );
+
+    await unipilotVault4
+      .connect(user4)
+      .deposit(
+        parseUnits("16", "18"),
+        parseUnits("19000", "6"),
+        user4.address,
+        {
+          value: parseUnits("16", "18"),
+        },
+      );
+
+    // await unipilotVault4.connect(owner).readjustLiquidity();
+    // owner dosent has WETH so we just swapped it from other pool
+    await generateFeeThroughSwap(
+      swapRouter,
+      owner,
+      USDC,
+      WETH,
+      "5000000",
+      3000,
+    );
+
+    // now swap to get the pool out of range
+    await generateFeeThroughSwap(swapRouter, owner, WETH, USDT, "900", 3000);
+
+    // now pool is out of range so run readjustLiquidity to get both amounts in pool
+    await unipilotVault4.connect(owner).readjustLiquidity();
+
+    // pull liquidity and check uniswap reserves are empty now
+    await unipilotVault4.connect(owner).pullLiquidity(unipilotVault4.address);
+
+    // push all liquidity to uniswap again
+    await unipilotVault4.connect(owner).readjustLiquidity();
+
+    // withdraw all liquidity of existing users
+    const ownerLp = await unipilotVault4.balanceOf(owner.address);
+
+    const user0Lp = await unipilotVault4.balanceOf(user0.address);
+    const user1Lp = await unipilotVault4.balanceOf(user1.address);
+    const user2Lp = await unipilotVault4.balanceOf(user2.address);
+    const user3Lp = await unipilotVault4.balanceOf(user3.address);
+    const user4Lp = await unipilotVault4.balanceOf(user4.address);
+
+    await unipilotVault4.connect(user4).withdraw(user4Lp, user4.address, false);
+    await unipilotVault4.connect(user3).withdraw(user3Lp, user3.address, true);
+    await unipilotVault4.connect(user2).withdraw(user2Lp, user2.address, false);
+    await unipilotVault4.connect(user1).withdraw(user1Lp, user1.address, true);
+    await unipilotVault4.connect(user0).withdraw(user0Lp, user0.address, true);
+    await unipilotVault4.connect(owner).withdraw(ownerLp, owner.address, true);
+
+    reserves = await unipilotVault4.callStatic.getPositionDetails();
+
+    console.log("res after-> ", reserves);
+    console.log("Balance WETH", {
+      WETH: await WETH.balanceOf(unipilotVault4.address),
+    });
+    console.log("Balance USDT", {
+      USDT: await USDT.balanceOf(unipilotVault4.address),
+    });
   });
 }
