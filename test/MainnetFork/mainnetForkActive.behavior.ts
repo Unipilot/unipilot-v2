@@ -14,6 +14,7 @@ import {
 } from "../../typechain";
 import ERC20Artifact from "../../artifacts/contracts/test/ERC20.sol/ERC20.json";
 import WETH9Artifact from "uniswap-v3-deploy-plugin/src/util/WETH9.json";
+import PILOTArtifact from "../../artifacts/contracts/test/PilotToken.sol/Pilot.json";
 
 // import SwapRouterArtifact from "../utils/MainnetSwapRouterJson/SwapRouter.json";
 import SwapRouterArtifact from "../../artifacts/contracts/test/SwapRouter.sol/SwapRouter.json";
@@ -37,9 +38,13 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   let wbtcWeth1: ContractFactory;
   let wbtcWeth2: ContractFactory;
   let wethUsdt: ContractFactory;
+  let daiWeth: ContractFactory;
+  let pilotWeth: ContractFactory;
   let wbtcUSDCVault: string;
   let wbtcWethVault1: string;
   let wbtcWethVault2: string;
+  let pilotWethVault: string;
+  let daiWethVault: string;
   let SHIB: Contract;
   let PILOT: Contract;
   let DAI: Contract;
@@ -53,6 +58,8 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   let unipilotVault2: UnipilotActiveVault; //WBTC-WETH-500
   let unipilotVault3: UnipilotActiveVault; //WBTC-WETH-3000
   let unipilotVault4: UnipilotActiveVault; //ETH-USDT-3000
+  let unipilotVault6: UnipilotActiveVault; //DAI-WETH-3000
+  let unipilotVault7: UnipilotActiveVault; //PILOT-WETH-3000
   let owner: any;
 
   const encodedPriceWbtcUsdc = encodePriceSqrt(
@@ -105,6 +112,15 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       ERC20Artifact.abi,
       "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     );
+    PILOT = await ethers.getContractAt(
+      PILOTArtifact.abi,
+      "0x37C997B35C619C21323F3518B9357914E8B99525",
+    );
+
+    DAI = await ethers.getContractAt(
+      ERC20Artifact.abi,
+      "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    );
 
     WETH = await ethers.getContractAt(
       WETH9Artifact.abi,
@@ -134,8 +150,10 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
         "0x4585FE77225b41b697C938B018E2Ac67Ac5a20c0", //WBTC-WETH-500
         "0xCBCdF9626bC03E24f779434178A73a0B4bad62eD", //WBTC-WETH-3000
         "0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36", //ETH-USDT-3000
+        "0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8", //DAI-WETH-3000
+        "0xFC9F572124d8f469960b94537b493F2676776c03", //PILOT-WETH-3000
       ],
-      [27, 22, 10, 28],
+      [27, 22, 10, 28, 28, 40],
     );
 
     uniswapPool = (await ethers.getContractAt(
@@ -187,6 +205,27 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
         "WETH-USDT",
       );
 
+    // await unipilotFactory
+    //   .connect(owner)
+    //   .createVault(
+    //     DAI.address,
+    //     WETH.address,
+    //     "3000",
+    //     encodedPrice2,
+    //     "DAI-WETH-3000",
+    //     "DAI-WETH",
+    //   );
+    await unipilotFactory
+      .connect(owner)
+      .createVault(
+        PILOT.address,
+        WETH.address,
+        "3000",
+        encodedPrice2,
+        "PILOT-WETH-3000",
+        "PILOT-WETH",
+      );
+
     const WethUsdtVault = await unipilotFactory.vaults(
       WETH.address,
       USDT.address,
@@ -211,6 +250,18 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       "3000",
     );
 
+    daiWethVault = await unipilotFactory.vaults(
+      DAI.address,
+      WETH.address,
+      "3000",
+    );
+
+    pilotWethVault = await unipilotFactory.vaults(
+      PILOT.address,
+      WETH.address,
+      "3000",
+    );
+
     wbtcUSDC = await ethers.getContractFactory("UnipilotActiveVault");
     wbtcWeth1 = await ethers.getContractFactory("UnipilotActiveVault");
     wbtcWeth2 = await ethers.getContractFactory("UnipilotActiveVault");
@@ -218,6 +269,8 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     const wethUsdtVaultInstance = await ethers.getContractFactory(
       "UnipilotActiveVault",
     );
+    daiWeth = await ethers.getContractFactory("UnipilotActiveVault");
+    pilotWeth = await ethers.getContractFactory("UnipilotActiveVault");
 
     unipilotVault1 = wbtcUSDC.attach(wbtcUSDCVault) as UnipilotActiveVault;
     unipilotVault2 = wbtcWeth1.attach(wbtcWethVault1) as UnipilotActiveVault;
@@ -225,11 +278,15 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     unipilotVault4 = wethUsdtVaultInstance.attach(
       WethUsdtVault,
     ) as UnipilotActiveVault;
+    // unipilotVault6 = daiWeth.attach(daiWethVault) as UnipilotActiveVault;
+    unipilotVault7 = pilotWeth.attach(pilotWethVault) as UnipilotActiveVault;
 
     await unipilotVault1.connect(owner).init();
     await unipilotVault2.connect(owner).init();
     await unipilotVault3.connect(owner).init();
     await unipilotVault4.connect(owner).init();
+    // await unipilotVault6.connect(owner).init();
+    await unipilotVault7.connect(owner).init();
 
     await WBTC.connect(owner).approve(unipilotVault1.address, MaxUint256);
     await USDC.connect(owner).approve(unipilotVault1.address, MaxUint256);
@@ -243,9 +300,16 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     await WETH.connect(owner).approve(unipilotVault4.address, MaxUint256);
     await USDT.connect(owner).approve(unipilotVault4.address, MaxUint256);
 
+    // await DAI.connect(owner).approve(unipilotVault6.address, MaxUint256);
+    // await WETH.connect(owner).approve(unipilotVault6.address, MaxUint256);
+
+    await PILOT.connect(owner).approve(unipilotVault7.address, MaxUint256);
+    await WETH.connect(owner).approve(unipilotVault7.address, MaxUint256);
+
     await WETH.connect(owner).approve(swapRouter.address, MaxUint256);
     await USDC.connect(owner).approve(swapRouter.address, MaxUint256);
     await WBTC.connect(owner).approve(swapRouter.address, MaxUint256);
+    await PILOT.connect(owner).approve(swapRouter.address, MaxUint256);
   });
 
   it("Mainnet Deployments Test", async () => {
@@ -267,310 +331,315 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
     ticksData = await unipilotVault3.ticksData();
     console.log("WBTC-WETH-3000 ticksData->", ticksData);
 
+    ticksData = await unipilotVault7.ticksData();
+    console.log("DAI-WETH-3000 ticksData->", ticksData);
+
     console.log("unipilotFactory", unipilotFactory.address);
 
     console.log("WBTC-USDC-3000", unipilotVault1.address);
     console.log("WBTC-WETH-500", unipilotVault2.address);
     console.log("WBTC-WETH-3000", unipilotVault3.address);
     console.log("USDT-WETH-3000", unipilotVault4.address);
+    // console.log("DAI-WETH-3000", unipilotVault6.address);
+    console.log("PILOT-WETH-3000", unipilotVault7.address);
   });
 
-  it("Should be deposit", async () => {
-    let tx = await unipilotVault1
-      .connect(owner)
-      .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
-    console.log("Tx hash", tx.hash);
-    expect(await unipilotVault1.balanceOf(owner.address)).to.be.gt(0);
-  });
-  it("Should be readjust", async () => {
-    await unipilotVault1
-      .connect(owner)
-      .deposit(parseUnits("1", "8"), parseUnits("20000", "6"), owner.address);
+  // it("Should be deposit", async () => {
+  //   let tx = await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
+  //   console.log("Tx hash", tx.hash);
+  //   expect(await unipilotVault1.balanceOf(owner.address)).to.be.gt(0);
+  // });
+  // it("Should be readjust", async () => {
+  //   await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("1", "8"), parseUnits("20000", "6"), owner.address);
 
-    let tx = await unipilotVault1.connect(owner).readjustLiquidity();
-    console.log("Tx hash", tx.hash);
-  });
+  //   let tx = await unipilotVault1.connect(owner).readjustLiquidity();
+  //   console.log("Tx hash", tx.hash);
+  // });
 
-  it("Should be withdraw", async () => {
-    await unipilotVault1
-      .connect(owner)
-      .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
-    let liquidity = await unipilotVault1.balanceOf(owner.address);
-    console.log(liquidity);
-
-    let tx = await unipilotVault1
-      .connect(owner)
-      .withdraw(liquidity, owner.address, false);
-    console.log("Tx hash", tx.hash);
-    expect(await unipilotVault1.balanceOf(owner.address)).to.be.equal(0);
-  });
-
-  // it("Should Readjust after pull liquidity", async () => {
+  // it("Should be withdraw", async () => {
   //   await unipilotVault1
   //     .connect(owner)
   //     .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
-  //     await unipilotVault1
-  //     .connect(owner)
-  //     .deposit(parseUnits("0.5", "8"), parseUnits("1500", "6"), owner.address);
-  //     await unipilotVault1
-  //     .connect(owner)
-  //     .deposit(parseUnits("10", "8"), parseUnits("100", "6"), owner.address);
   //   let liquidity = await unipilotVault1.balanceOf(owner.address);
-  //   console.log("LP Balance ", liquidity);
+  //   console.log(liquidity);
 
-  //   await unipilotVault1.connect(owner).pullLiquidity(owner.address);
-
-  //   let positionDetails = await unipilotVault1.callStatic.getPositionDetails();
-
-  //   let reserveBeforeReAdjust =
-  //     positionDetails[0].gte(parseUnits("0", "6")) &&
-  //     positionDetails[0].lte(parseUnits("1", "6"));
-
-  //   await unipilotVault1.connect(owner).readjustLiquidity();
-
-  //   // positionDetails = await unipilotVault1.callStatic.getPositionDetails();
-
-  //   // let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
-  //   // expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
+  //   let tx = await unipilotVault1
+  //     .connect(owner)
+  //     .withdraw(liquidity, owner.address, false);
+  //   console.log("Tx hash", tx.hash);
+  //   expect(await unipilotVault1.balanceOf(owner.address)).to.be.equal(0);
   // });
 
-  it("WBTC-USDC-3000: Pool should out of range then earn fees after rebalance ", async () => {
-    await unipilotVault1
-      .connect(owner)
-      .deposit(parseUnits("0.1", "8"), parseUnits("10", "6"), owner.address);
-    let liquidity = await unipilotVault1.balanceOf(owner.address);
-    console.log("LP balance of user is : ", liquidity);
+  // // it("Should Readjust after pull liquidity", async () => {
+  // //   await unipilotVault1
+  // //     .connect(owner)
+  // //     .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
+  // //     await unipilotVault1
+  // //     .connect(owner)
+  // //     .deposit(parseUnits("0.5", "8"), parseUnits("1500", "6"), owner.address);
+  // //     await unipilotVault1
+  // //     .connect(owner)
+  // //     .deposit(parseUnits("10", "8"), parseUnits("100", "6"), owner.address);
+  // //   let liquidity = await unipilotVault1.balanceOf(owner.address);
+  // //   console.log("LP Balance ", liquidity);
 
-    console.log("Balance before Swaps", {
-      USDC: await USDC.balanceOf(owner.address),
-      WBTC: await WBTC.balanceOf(owner.address),
-    });
+  // //   await unipilotVault1.connect(owner).pullLiquidity(owner.address);
 
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      USDC,
-      WBTC,
-      (600000).toString(),
-      3000,
-    );
+  // //   let positionDetails = await unipilotVault1.callStatic.getPositionDetails();
 
-    let FeesBeforeSwap = { fees0: "", fees1: "" };
-    let FeesAfterSwap = { fees0: "", fees1: "" };
-    for (let i = 0; i < 10; i++) {
-      await generateFeeThroughSwap(
-        swapRouter,
-        owner,
-        WBTC,
-        USDC,
-        (5).toString(),
-        3000,
-      );
-      let PositionDetails =
-        await unipilotVault1.callStatic.getPositionDetails();
-      let obj = {
-        fees0: PositionDetails.fees0.toString(),
-        fees1: PositionDetails.fees1.toString(),
-      };
-      console.log(`***On the swap of ${i + 1} fees are`, obj);
-      if (obj.fees0 === "0" || obj.fees0 === "15105") {
-        FeesBeforeSwap = obj;
-        console.log(
-          "******** Pool is out of range, so rebalance using fee1 ********",
-        );
-        await unipilotVault1.connect(owner).readjustLiquidity();
-        console.log("Swap USDC to WBTC ");
+  // //   let reserveBeforeReAdjust =
+  // //     positionDetails[0].gte(parseUnits("0", "6")) &&
+  // //     positionDetails[0].lte(parseUnits("1", "6"));
 
-        await generateFeeThroughSwap(
-          swapRouter,
-          owner,
-          USDC,
-          WBTC,
-          (100).toString(),
-          3000,
-        );
-      }
-      FeesAfterSwap = obj;
-    }
+  // //   await unipilotVault1.connect(owner).readjustLiquidity();
 
-    console.log("Balance After Swaps", {
-      USDC: await USDC.balanceOf(owner.address),
-      WBTC: await WBTC.balanceOf(owner.address),
-    });
+  // //   // positionDetails = await unipilotVault1.callStatic.getPositionDetails();
 
-    let status =
-      FeesBeforeSwap.fees0 > FeesAfterSwap.fees0 &&
-      FeesBeforeSwap.fees1 > FeesAfterSwap.fees1;
-    expect(status).to.be.true;
-  });
+  // //   // let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
+  // //   // expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
+  // // });
 
-  it("WBTC-WETH-500: Pool should out of range then earn fees after rebalance ", async () => {
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      WBTC,
-      WETH,
-      (10).toString(),
-      500,
-    );
-    await unipilotVault2
-      .connect(owner)
-      .deposit(parseUnits("0.1", "8"), parseUnits("10", "18"), owner.address, {
-        value: parseUnits("10", "18"),
-      });
-    let liquidity = await unipilotVault2.balanceOf(owner.address);
-    console.log("liquidity", liquidity);
+  // it("WBTC-USDC-3000: Pool should out of range then earn fees after rebalance ", async () => {
+  //   await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("0.1", "8"), parseUnits("10", "6"), owner.address);
+  //   let liquidity = await unipilotVault1.balanceOf(owner.address);
+  //   console.log("LP balance of user is : ", liquidity);
 
-    console.log("WETH Balance ", await WETH.balanceOf(owner.address));
+  //   console.log("Balance before Swaps", {
+  //     USDC: await USDC.balanceOf(owner.address),
+  //     WBTC: await WBTC.balanceOf(owner.address),
+  //   });
 
-    await unipilotVault2.connect(owner).readjustLiquidity();
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     USDC,
+  //     WBTC,
+  //     (600000).toString(),
+  //     3000,
+  //   );
 
-    for (let i = 0; i < 7; i++) {
-      await unipilotVault2
-        .connect(owner)
-        .deposit(
-          parseUnits("0.3", "8"),
-          parseUnits((i + 1).toString(), "18"),
-          owner.address,
-          {
-            value: parseUnits(i.toString(), "18"),
-          },
-        );
-    }
+  //   let FeesBeforeSwap = { fees0: "", fees1: "" };
+  //   let FeesAfterSwap = { fees0: "", fees1: "" };
+  //   for (let i = 0; i < 10; i++) {
+  //     await generateFeeThroughSwap(
+  //       swapRouter,
+  //       owner,
+  //       WBTC,
+  //       USDC,
+  //       (5).toString(),
+  //       3000,
+  //     );
+  //     let PositionDetails =
+  //       await unipilotVault1.callStatic.getPositionDetails();
+  //     let obj = {
+  //       fees0: PositionDetails.fees0.toString(),
+  //       fees1: PositionDetails.fees1.toString(),
+  //     };
+  //     console.log(`***On the swap of ${i + 1} fees are`, obj);
+  //     if (obj.fees0 === "0" || obj.fees0 === "15105") {
+  //       FeesBeforeSwap = obj;
+  //       console.log(
+  //         "******** Pool is out of range, so rebalance using fee1 ********",
+  //       );
+  //       await unipilotVault1.connect(owner).readjustLiquidity();
+  //       console.log("Swap USDC to WBTC ");
 
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      WBTC,
-      WETH,
-      (40).toString(),
-      500,
-    );
-    let PositionDetails = await unipilotVault2.callStatic.getPositionDetails();
-    let obj = {
-      fees0: PositionDetails.fees0.toString(),
-      fees1: PositionDetails.fees1.toString(),
-    };
-    console.log(obj);
+  //       await generateFeeThroughSwap(
+  //         swapRouter,
+  //         owner,
+  //         USDC,
+  //         WBTC,
+  //         (100).toString(),
+  //         3000,
+  //       );
+  //     }
+  //     FeesAfterSwap = obj;
+  //   }
 
-    console.log("Pool is out of range now");
+  //   console.log("Balance After Swaps", {
+  //     USDC: await USDC.balanceOf(owner.address),
+  //     WBTC: await WBTC.balanceOf(owner.address),
+  //   });
 
-    await unipilotVault2.connect(owner).readjustLiquidity();
+  //   let status =
+  //     FeesBeforeSwap.fees0 > FeesAfterSwap.fees0 &&
+  //     FeesBeforeSwap.fees1 > FeesAfterSwap.fees1;
+  //   expect(status).to.be.true;
+  // });
 
-    await unipilotVault2.connect(owner).pullLiquidity(owner.address);
+  // it("WBTC-WETH-500: Pool should out of range then earn fees after rebalance ", async () => {
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WBTC,
+  //     WETH,
+  //     (10).toString(),
+  //     500,
+  //   );
+  //   await unipilotVault2
+  //     .connect(owner)
+  //     .deposit(parseUnits("0.1", "8"), parseUnits("10", "18"), owner.address, {
+  //       value: parseUnits("10", "18"),
+  //     });
+  //   let liquidity = await unipilotVault2.balanceOf(owner.address);
+  //   console.log("liquidity", liquidity);
 
-    await unipilotVault2
-      .connect(owner)
-      .withdraw(
-        await unipilotVault2.balanceOf(owner.address),
-        owner.address,
-        false,
-      );
+  //   console.log("WETH Balance ", await WETH.balanceOf(owner.address));
 
-    let amounts = {
-      amount0: await WBTC.balanceOf(owner.address),
-      amount1: await WETH.balanceOf(owner.address),
-    };
+  //   await unipilotVault2.connect(owner).readjustLiquidity();
 
-    console.log("Amounts", amounts);
+  //   for (let i = 0; i < 7; i++) {
+  //     await unipilotVault2
+  //       .connect(owner)
+  //       .deposit(
+  //         parseUnits("0.3", "8"),
+  //         parseUnits((i + 1).toString(), "18"),
+  //         owner.address,
+  //         {
+  //           value: parseUnits(i.toString(), "18"),
+  //         },
+  //       );
+  //   }
 
-    let status =
-      amounts.amount0 >= parseUnits("2659.17297488", "8") &&
-      amounts.amount1 >= parseUnits("623.040697040711721106", "18");
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WBTC,
+  //     WETH,
+  //     (40).toString(),
+  //     500,
+  //   );
+  //   let PositionDetails = await unipilotVault2.callStatic.getPositionDetails();
+  //   let obj = {
+  //     fees0: PositionDetails.fees0.toString(),
+  //     fees1: PositionDetails.fees1.toString(),
+  //   };
+  //   console.log(obj);
 
-    expect(status).to.be.true;
-  });
+  //   console.log("Pool is out of range now");
 
-  it("WBTC-WETH-3000: Pool should out of range then earn fees after rebalance ", async () => {
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      WBTC,
-      WETH,
-      (10).toString(),
-      3000,
-    );
-    await unipilotVault3
-      .connect(owner)
-      .deposit(parseUnits("0.1", "8"), parseUnits("10", "18"), owner.address, {
-        value: parseUnits("10", "18"),
-      });
-    let liquidity = await unipilotVault3.balanceOf(owner.address);
-    console.log("liquidity", liquidity);
+  //   await unipilotVault2.connect(owner).readjustLiquidity();
 
-    console.log("WETH Balance ", await WETH.balanceOf(owner.address));
+  //   await unipilotVault2.connect(owner).pullLiquidity(owner.address);
 
-    await unipilotVault3.connect(owner).readjustLiquidity();
+  //   await unipilotVault2
+  //     .connect(owner)
+  //     .withdraw(
+  //       await unipilotVault2.balanceOf(owner.address),
+  //       owner.address,
+  //       false,
+  //     );
 
-    for (let i = 0; i < 7; i++) {
-      await unipilotVault3
-        .connect(owner)
-        .deposit(
-          parseUnits("0.3", "8"),
-          parseUnits((i + 1).toString(), "18"),
-          owner.address,
-          {
-            value: parseUnits(i.toString(), "18"),
-          },
-        );
-    }
+  //   let amounts = {
+  //     amount0: await WBTC.balanceOf(owner.address),
+  //     amount1: await WETH.balanceOf(owner.address),
+  //   };
 
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      WBTC,
-      WETH,
-      (100).toString(),
-      3000,
-    );
-    let PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
-    let obj = {
-      fees0: PositionDetails.fees0.toString(),
-      fees1: PositionDetails.fees1.toString(),
-    };
-    console.log(obj);
-    // await generateFeeThroughSwap(
-    //   swapRouter,
-    //   owner,
-    //   WBTC,
-    //   WETH,
-    //   (1).toString(),
-    //   3000,
-    // );
-    // PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
-    // obj = {
-    //   fees0: PositionDetails.fees0.toString(),
-    //   fees1: PositionDetails.fees1.toString(),
-    // };
-    // console.log(obj);
+  //   console.log("Amounts", amounts);
 
-    console.log("Pool is out of range now");
+  //   let status =
+  //     amounts.amount0 >= parseUnits("2659.17297488", "8") &&
+  //     amounts.amount1 >= parseUnits("623.040697040711721106", "18");
 
-    await unipilotVault3.connect(owner).readjustLiquidity();
+  //   expect(status).to.be.true;
+  // });
 
-    await unipilotVault3.connect(owner).pullLiquidity(owner.address);
+  // it("WBTC-WETH-3000: Pool should out of range then earn fees after rebalance ", async () => {
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WBTC,
+  //     WETH,
+  //     (10).toString(),
+  //     3000,
+  //   );
+  //   await unipilotVault3
+  //     .connect(owner)
+  //     .deposit(parseUnits("0.1", "8"), parseUnits("10", "18"), owner.address, {
+  //       value: parseUnits("10", "18"),
+  //     });
+  //   let liquidity = await unipilotVault3.balanceOf(owner.address);
+  //   console.log("liquidity", liquidity);
 
-    await unipilotVault3
-      .connect(owner)
-      .withdraw(
-        await unipilotVault3.balanceOf(owner.address),
-        owner.address,
-        false,
-      );
+  //   console.log("WETH Balance ", await WETH.balanceOf(owner.address));
 
-    let amounts = {
-      amount0: await WBTC.balanceOf(owner.address),
-      amount1: await WETH.balanceOf(owner.address),
-    };
+  //   await unipilotVault3.connect(owner).readjustLiquidity();
 
-    console.log("Amounts", amounts);
+  //   for (let i = 0; i < 7; i++) {
+  //     await unipilotVault3
+  //       .connect(owner)
+  //       .deposit(
+  //         parseUnits("0.3", "8"),
+  //         parseUnits((i + 1).toString(), "18"),
+  //         owner.address,
+  //         {
+  //           value: parseUnits(i.toString(), "18"),
+  //         },
+  //       );
+  //   }
 
-    let status =
-      amounts.amount0 >= parseUnits("2599.97262993", "8") &&
-      amounts.amount1 >= parseUnits("1346.820502673353853014", "18");
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WBTC,
+  //     WETH,
+  //     (100).toString(),
+  //     3000,
+  //   );
+  //   let PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
+  //   let obj = {
+  //     fees0: PositionDetails.fees0.toString(),
+  //     fees1: PositionDetails.fees1.toString(),
+  //   };
+  //   console.log(obj);
+  //   // await generateFeeThroughSwap(
+  //   //   swapRouter,
+  //   //   owner,
+  //   //   WBTC,
+  //   //   WETH,
+  //   //   (1).toString(),
+  //   //   3000,
+  //   // );
+  //   // PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
+  //   // obj = {
+  //   //   fees0: PositionDetails.fees0.toString(),
+  //   //   fees1: PositionDetails.fees1.toString(),
+  //   // };
+  //   // console.log(obj);
 
-    expect(status).to.be.true;
-  });
+  //   console.log("Pool is out of range now");
+
+  //   await unipilotVault3.connect(owner).readjustLiquidity();
+
+  //   await unipilotVault3.connect(owner).pullLiquidity(owner.address);
+
+  //   await unipilotVault3
+  //     .connect(owner)
+  //     .withdraw(
+  //       await unipilotVault3.balanceOf(owner.address),
+  //       owner.address,
+  //       false,
+  //     );
+
+  //   let amounts = {
+  //     amount0: await WBTC.balanceOf(owner.address),
+  //     amount1: await WETH.balanceOf(owner.address),
+  //   };
+
+  //   console.log("Amounts", amounts);
+
+  //   let status =
+  //     amounts.amount0 >= parseUnits("2599.97262993", "8") &&
+  //     amounts.amount1 >= parseUnits("1346.820502673353853014", "18");
+
+  //   expect(status).to.be.true;
+  // });
 
   it("ETH-USDT-3000: All tests of ETH/USDT", async () => {
     // set the initial ratio of vault equal to uniswap pool
@@ -719,4 +788,108 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
       USDT: await USDT.balanceOf(unipilotVault4.address),
     });
   });
+
+  // it("PILOT-WETH-3000", async () => {
+  //   await generateFeeThroughSwap(swapRouter, owner, USDC, WETH, "100000", 3000);
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WETH,
+  //     PILOT,
+  //     "1.175028755869220114",
+  //     3000,
+  //   );
+  //   await unipilotVault7
+  //     .connect(owner)
+  //     .deposit(parseUnits("100", "18"), parseUnits("1", "18"), owner.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
+
+  //   console.log("LP:", await unipilotVault7.balanceOf(owner.address));
+  //   console.log("PILOT:", await PILOT.balanceOf(owner.address));
+
+  //   var reserves = await unipilotVault7.callStatic.getPositionDetails();
+  //   // console.log("res before-> ", reserves);
+
+  //   // readjust the liquidity to consume all amount of vault
+  //   await unipilotVault7.connect(owner).readjustLiquidity();
+  //   // var reserves = await unipilotVault4.callStatic.getPositionDetails();
+
+  //   // fetch new account for adding liquidity in Unipilot
+  //   const [user0, user1, user2, user3, user4] = waffle.provider.getWallets();
+
+  //   // send amount0 & amount1 from existing account to new accounts
+  //   await owner.sendTransaction({
+  //     to: user0.address,
+  //     value: parseUnits("1", "18"),
+  //   });
+
+  //   await owner.sendTransaction({
+  //     to: user1.address,
+  //     value: parseUnits("1", "18"),
+  //   });
+
+  //   await owner.sendTransaction({
+  //     to: user2.address,
+  //     value: parseUnits("5", "18"),
+  //   });
+
+  //   await owner.sendTransaction({
+  //     to: user3.address,
+  //     value: parseUnits("10", "18"),
+  //   });
+
+  //   await owner.sendTransaction({
+  //     to: user4.address,
+  //     value: parseUnits("16", "18"),
+  //   });
+
+  //   await PILOT.connect(owner).transfer(user0.address, parseUnits("10", "18"));
+  //   await PILOT.connect(owner).transfer(user1.address, parseUnits("10", "18"));
+  //   await PILOT.connect(owner).transfer(user2.address, parseUnits("10", "18"));
+  //   await PILOT.connect(owner).transfer(user3.address, parseUnits("10", "18"));
+  //   await PILOT.connect(owner).transfer(user4.address, parseUnits("10", "18"));
+
+  //   await PILOT.connect(user0).approve(unipilotVault7.address, MaxUint256);
+  //   await PILOT.connect(user1).approve(unipilotVault7.address, MaxUint256);
+  //   await PILOT.connect(user2).approve(unipilotVault7.address, MaxUint256);
+  //   await PILOT.connect(user3).approve(unipilotVault7.address, MaxUint256);
+  //   await PILOT.connect(user4).approve(unipilotVault7.address, MaxUint256);
+
+  //   // now add liquidity from all new accounts
+  //   await unipilotVault7
+  //     .connect(user0)
+  //     .deposit(parseUnits("1", "18"), parseUnits("3112", "18"), user0.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
+
+  //   await unipilotVault7
+  //     .connect(user1)
+  //     .deposit(parseUnits("1", "18"), parseUnits("6000", "18"), user1.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
+
+  //   await unipilotVault7
+  //     .connect(user2)
+  //     .deposit(parseUnits("5", "18"), parseUnits("8000", "18"), user2.address, {
+  //       value: parseUnits("5", "18"),
+  //     });
+
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     PILOT,
+  //     WETH,
+  //     "500",
+  //     3000,
+  //   );
+
+  //   let PositionDetails =
+  //         await unipilotVault7.callStatic.getPositionDetails();
+  //       let obj = {
+  //         fees0: PositionDetails.fees0.toString(),
+  //         fees1: PositionDetails.fees1.toString(),
+  //       };
+  //       console.log("FEES", obj);
+  // });
 }
