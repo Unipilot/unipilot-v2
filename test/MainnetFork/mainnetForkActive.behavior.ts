@@ -374,34 +374,34 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //   expect(await unipilotVault1.balanceOf(owner.address)).to.be.equal(0);
   // });
 
-  // // it("Should Readjust after pull liquidity", async () => {
-  // //   await unipilotVault1
-  // //     .connect(owner)
-  // //     .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
-  // //     await unipilotVault1
-  // //     .connect(owner)
-  // //     .deposit(parseUnits("0.5", "8"), parseUnits("1500", "6"), owner.address);
-  // //     await unipilotVault1
-  // //     .connect(owner)
-  // //     .deposit(parseUnits("10", "8"), parseUnits("100", "6"), owner.address);
-  // //   let liquidity = await unipilotVault1.balanceOf(owner.address);
-  // //   console.log("LP Balance ", liquidity);
+  // it("Should Readjust after pull liquidity", async () => {
+  //   await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("1", "8"), parseUnits("40000", "6"), owner.address);
+  //     await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("0.5", "8"), parseUnits("1500", "6"), owner.address);
+  //     await unipilotVault1
+  //     .connect(owner)
+  //     .deposit(parseUnits("10", "8"), parseUnits("100", "6"), owner.address);
+  //   let liquidity = await unipilotVault1.balanceOf(owner.address);
+  //   console.log("LP Balance ", liquidity);
 
-  // //   await unipilotVault1.connect(owner).pullLiquidity(owner.address);
+  //   await unipilotVault1.connect(owner).pullLiquidity(owner.address);
 
-  // //   let positionDetails = await unipilotVault1.callStatic.getPositionDetails();
+  //   let positionDetails = await unipilotVault1.callStatic.getPositionDetails();
 
-  // //   let reserveBeforeReAdjust =
-  // //     positionDetails[0].gte(parseUnits("0", "6")) &&
-  // //     positionDetails[0].lte(parseUnits("1", "6"));
+  //   let reserveBeforeReAdjust =
+  //     positionDetails[0].gte(parseUnits("0", "6")) &&
+  //     positionDetails[0].lte(parseUnits("1", "6"));
 
-  // //   await unipilotVault1.connect(owner).readjustLiquidity();
+  //   await unipilotVault1.connect(owner).readjustLiquidity();
 
-  // //   // positionDetails = await unipilotVault1.callStatic.getPositionDetails();
+  //   // positionDetails = await unipilotVault1.callStatic.getPositionDetails();
 
-  // //   // let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
-  // //   // expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
-  // // });
+  //   // let reserveAfterReAdjust = positionDetails[0].gte(parseUnits("14", "6"));
+  //   // expect(reserveBeforeReAdjust && reserveAfterReAdjust).to.be.true;
+  // });
 
   // it("WBTC-USDC-3000: Pool should out of range then earn fees after rebalance ", async () => {
   //   await unipilotVault1
@@ -442,7 +442,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //       fees1: PositionDetails.fees1.toString(),
   //     };
   //     console.log(`***On the swap of ${i + 1} fees are`, obj);
-  //     if (obj.fees0 === "0" || obj.fees0 === "15105") {
+  //     if (obj.fees0 === "0" || obj.fees1 === "38") {
   //       FeesBeforeSwap = obj;
   //       console.log(
   //         "******** Pool is out of range, so rebalance using fee1 ********",
@@ -467,9 +467,15 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //     WBTC: await WBTC.balanceOf(owner.address),
   //   });
 
+  //   console.log({
+  //     FeesBeforeSwap,
+  //     FeesAfterSwap,
+  //   });
+
   //   let status =
   //     FeesBeforeSwap.fees0 > FeesAfterSwap.fees0 &&
-  //     FeesBeforeSwap.fees1 > FeesAfterSwap.fees1;
+  //     FeesBeforeSwap.fees1 < FeesAfterSwap.fees1;
+
   //   expect(status).to.be.true;
   // });
 
@@ -544,8 +550,8 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //   console.log("Amounts", amounts);
 
   //   let status =
-  //     amounts.amount0 >= parseUnits("2659.17297488", "8") &&
-  //     amounts.amount1 >= parseUnits("623.040697040711721106", "18");
+  //     amounts.amount0 >= parseUnits("2658.82378793", "8") &&
+  //     amounts.amount1 >= parseUnits("630.099810024837891001", "18");
 
   //   expect(status).to.be.true;
   // });
@@ -561,8 +567,8 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //   );
   //   await unipilotVault3
   //     .connect(owner)
-  //     .deposit(parseUnits("0.1", "8"), parseUnits("10", "18"), owner.address, {
-  //       value: parseUnits("10", "18"),
+  //     .deposit(parseUnits("0.1", "8"), parseUnits("1", "18"), owner.address, {
+  //       value: parseUnits("5", "18"),
   //     });
   //   let liquidity = await unipilotVault3.balanceOf(owner.address);
   //   console.log("liquidity", liquidity);
@@ -575,11 +581,11 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //     await unipilotVault3
   //       .connect(owner)
   //       .deposit(
-  //         parseUnits("0.3", "8"),
-  //         parseUnits((i + 1).toString(), "18"),
+  //         parseUnits("0.001", "8"),
+  //         parseUnits((i + 0.001).toString(), "18"),
   //         owner.address,
   //         {
-  //           value: parseUnits(i.toString(), "18"),
+  //           value: parseUnits(i + (0.001).toString(), "18"),
   //         },
   //       );
   //   }
@@ -589,7 +595,7 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //     owner,
   //     WBTC,
   //     WETH,
-  //     (100).toString(),
+  //     (107).toString(),
   //     3000,
   //   );
   //   let PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
@@ -598,24 +604,40 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //     fees1: PositionDetails.fees1.toString(),
   //   };
   //   console.log(obj);
-  //   // await generateFeeThroughSwap(
-  //   //   swapRouter,
-  //   //   owner,
-  //   //   WBTC,
-  //   //   WETH,
-  //   //   (1).toString(),
-  //   //   3000,
-  //   // );
-  //   // PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
-  //   // obj = {
-  //   //   fees0: PositionDetails.fees0.toString(),
-  //   //   fees1: PositionDetails.fees1.toString(),
-  //   // };
-  //   // console.log(obj);
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WETH,
+  //     WBTC,
+
+  //     (100).toString(),
+  //     3000,
+  //   );
+  //   PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
+  //   obj = {
+  //     fees0: PositionDetails.fees0.toString(),
+  //     fees1: PositionDetails.fees1.toString(),
+  //   };
+  //   console.log(obj);
 
   //   console.log("Pool is out of range now");
 
   //   await unipilotVault3.connect(owner).readjustLiquidity();
+
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     WETH,
+  //     WBTC,
+  //     (1).toString(),
+  //     3000,
+  //   );
+  //   PositionDetails = await unipilotVault3.callStatic.getPositionDetails();
+  //   obj = {
+  //     fees0: PositionDetails.fees0.toString(),
+  //     fees1: PositionDetails.fees1.toString(),
+  //   };
+  //   console.log(obj);
 
   //   await unipilotVault3.connect(owner).pullLiquidity(owner.address);
 
@@ -635,161 +657,161 @@ export async function shouldBehaveLikeActiveLive(): Promise<void> {
   //   console.log("Amounts", amounts);
 
   //   let status =
-  //     amounts.amount0 >= parseUnits("2599.97262993", "8") &&
-  //     amounts.amount1 >= parseUnits("1346.820502673353853014", "18");
+  //     amounts.amount0 >= parseUnits("2598.72716253", "8") &&
+  //     amounts.amount1 >= parseUnits("1373.730370550672035807", "18");
 
   //   expect(status).to.be.true;
   // });
 
-  it("ETH-USDT-3000: All tests of ETH/USDT", async () => {
-    // set the initial ratio of vault equal to uniswap pool
-    await unipilotVault4
-      .connect(owner)
-      .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), owner.address, {
-        value: parseUnits("1", "18"),
-      });
+  // it("ETH-USDT-3000: All tests of ETH/USDT", async () => {
+  //   // set the initial ratio of vault equal to uniswap pool
+  //   await unipilotVault4
+  //     .connect(owner)
+  //     .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), owner.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
 
-    // verify liquidity should be added in uniswap
-    var reserves = await unipilotVault4.callStatic.getPositionDetails();
-    // console.log("res before-> ", reserves);
+  //   // verify liquidity should be added in uniswap
+  //   var reserves = await unipilotVault4.callStatic.getPositionDetails();
+  //   // console.log("res before-> ", reserves);
 
-    // readjust the liquidity to consume all amount of vault
-    await unipilotVault4.connect(owner).readjustLiquidity();
-    // var reserves = await unipilotVault4.callStatic.getPositionDetails();
+  //   // readjust the liquidity to consume all amount of vault
+  //   await unipilotVault4.connect(owner).readjustLiquidity();
+  //   // var reserves = await unipilotVault4.callStatic.getPositionDetails();
 
-    // fetch new account for adding liquidity in Unipilot
-    const [user0, user1, user2, user3, user4] = waffle.provider.getWallets();
+  //   // fetch new account for adding liquidity in Unipilot
+  //   const [user0, user1, user2, user3, user4] = waffle.provider.getWallets();
 
-    // send amount0 & amount1 from existing account to new accounts
-    await owner.sendTransaction({
-      to: user0.address,
-      value: parseUnits("1", "18"),
-    });
+  //   // send amount0 & amount1 from existing account to new accounts
+  //   await owner.sendTransaction({
+  //     to: user0.address,
+  //     value: parseUnits("1", "18"),
+  //   });
 
-    await owner.sendTransaction({
-      to: user1.address,
-      value: parseUnits("1", "18"),
-    });
+  //   await owner.sendTransaction({
+  //     to: user1.address,
+  //     value: parseUnits("1", "18"),
+  //   });
 
-    await owner.sendTransaction({
-      to: user2.address,
-      value: parseUnits("5", "18"),
-    });
+  //   await owner.sendTransaction({
+  //     to: user2.address,
+  //     value: parseUnits("5", "18"),
+  //   });
 
-    await owner.sendTransaction({
-      to: user3.address,
-      value: parseUnits("10", "18"),
-    });
+  //   await owner.sendTransaction({
+  //     to: user3.address,
+  //     value: parseUnits("10", "18"),
+  //   });
 
-    await owner.sendTransaction({
-      to: user4.address,
-      value: parseUnits("16", "18"),
-    });
+  //   await owner.sendTransaction({
+  //     to: user4.address,
+  //     value: parseUnits("16", "18"),
+  //   });
 
-    await USDT.connect(owner).transfer(user0.address, parseUnits("5000", "6"));
-    await USDT.connect(owner).transfer(user1.address, parseUnits("6000", "6"));
-    await USDT.connect(owner).transfer(user2.address, parseUnits("8000", "6"));
-    await USDT.connect(owner).transfer(user3.address, parseUnits("11000", "6"));
-    await USDT.connect(owner).transfer(user4.address, parseUnits("19000", "6"));
+  //   await USDT.connect(owner).transfer(user0.address, parseUnits("5000", "6"));
+  //   await USDT.connect(owner).transfer(user1.address, parseUnits("6000", "6"));
+  //   await USDT.connect(owner).transfer(user2.address, parseUnits("8000", "6"));
+  //   await USDT.connect(owner).transfer(user3.address, parseUnits("11000", "6"));
+  //   await USDT.connect(owner).transfer(user4.address, parseUnits("19000", "6"));
 
-    await USDT.connect(user0).approve(unipilotVault4.address, MaxUint256);
-    await USDT.connect(user1).approve(unipilotVault4.address, MaxUint256);
-    await USDT.connect(user2).approve(unipilotVault4.address, MaxUint256);
-    await USDT.connect(user3).approve(unipilotVault4.address, MaxUint256);
-    await USDT.connect(user4).approve(unipilotVault4.address, MaxUint256);
+  //   await USDT.connect(user0).approve(unipilotVault4.address, MaxUint256);
+  //   await USDT.connect(user1).approve(unipilotVault4.address, MaxUint256);
+  //   await USDT.connect(user2).approve(unipilotVault4.address, MaxUint256);
+  //   await USDT.connect(user3).approve(unipilotVault4.address, MaxUint256);
+  //   await USDT.connect(user4).approve(unipilotVault4.address, MaxUint256);
 
-    // now add liquidity from all new accounts
-    await unipilotVault4
-      .connect(user0)
-      .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), user0.address, {
-        value: parseUnits("1", "18"),
-      });
+  //   // now add liquidity from all new accounts
+  //   await unipilotVault4
+  //     .connect(user0)
+  //     .deposit(parseUnits("1", "18"), parseUnits("3112", "6"), user0.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
 
-    await unipilotVault4
-      .connect(user1)
-      .deposit(parseUnits("1", "18"), parseUnits("6000", "6"), user1.address, {
-        value: parseUnits("1", "18"),
-      });
+  //   await unipilotVault4
+  //     .connect(user1)
+  //     .deposit(parseUnits("1", "18"), parseUnits("6000", "6"), user1.address, {
+  //       value: parseUnits("1", "18"),
+  //     });
 
-    await unipilotVault4
-      .connect(user2)
-      .deposit(parseUnits("5", "18"), parseUnits("8000", "6"), user2.address, {
-        value: parseUnits("5", "18"),
-      });
+  //   await unipilotVault4
+  //     .connect(user2)
+  //     .deposit(parseUnits("5", "18"), parseUnits("8000", "6"), user2.address, {
+  //       value: parseUnits("5", "18"),
+  //     });
 
-    await unipilotVault4
-      .connect(user3)
-      .deposit(
-        parseUnits("10", "18"),
-        parseUnits("11000", "6"),
-        user3.address,
-        {
-          value: parseUnits("10", "18"),
-        },
-      );
+  //   await unipilotVault4
+  //     .connect(user3)
+  //     .deposit(
+  //       parseUnits("10", "18"),
+  //       parseUnits("11000", "6"),
+  //       user3.address,
+  //       {
+  //         value: parseUnits("10", "18"),
+  //       },
+  //     );
 
-    await unipilotVault4
-      .connect(user4)
-      .deposit(
-        parseUnits("16", "18"),
-        parseUnits("19000", "6"),
-        user4.address,
-        {
-          value: parseUnits("16", "18"),
-        },
-      );
+  //   await unipilotVault4
+  //     .connect(user4)
+  //     .deposit(
+  //       parseUnits("16", "18"),
+  //       parseUnits("19000", "6"),
+  //       user4.address,
+  //       {
+  //         value: parseUnits("16", "18"),
+  //       },
+  //     );
 
-    // await unipilotVault4.connect(owner).readjustLiquidity();
-    // owner dosent has WETH so we just swapped it from other pool
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      USDC,
-      WETH,
-      "5000000",
-      3000,
-    );
+  //   // await unipilotVault4.connect(owner).readjustLiquidity();
+  //   // owner dosent has WETH so we just swapped it from other pool
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     owner,
+  //     USDC,
+  //     WETH,
+  //     "5000000",
+  //     3000,
+  //   );
 
-    // now swap to get the pool out of range
-    await generateFeeThroughSwap(swapRouter, owner, WETH, USDT, "900", 3000);
+  //   // now swap to get the pool out of range
+  //   await generateFeeThroughSwap(swapRouter, owner, WETH, USDT, "900", 3000);
 
-    // now pool is out of range so run readjustLiquidity to get both amounts in pool
-    await unipilotVault4.connect(owner).readjustLiquidity();
+  //   // now pool is out of range so run readjustLiquidity to get both amounts in pool
+  //   await unipilotVault4.connect(owner).readjustLiquidity();
 
-    // pull liquidity and check uniswap reserves are empty now
-    await unipilotVault4.connect(owner).pullLiquidity(unipilotVault4.address);
+  //   // pull liquidity and check uniswap reserves are empty now
+  //   await unipilotVault4.connect(owner).pullLiquidity(unipilotVault4.address);
 
-    // push all liquidity to uniswap again
-    await unipilotVault4.connect(owner).readjustLiquidity();
+  //   // push all liquidity to uniswap again
+  //   await unipilotVault4.connect(owner).readjustLiquidity();
 
-    // withdraw all liquidity of existing users
-    const ownerLp = await unipilotVault4.balanceOf(owner.address);
+  //   // withdraw all liquidity of existing users
+  //   const ownerLp = await unipilotVault4.balanceOf(owner.address);
 
-    const user0Lp = await unipilotVault4.balanceOf(user0.address);
-    const user1Lp = await unipilotVault4.balanceOf(user1.address);
-    const user2Lp = await unipilotVault4.balanceOf(user2.address);
-    const user3Lp = await unipilotVault4.balanceOf(user3.address);
-    const user4Lp = await unipilotVault4.balanceOf(user4.address);
+  //   const user0Lp = await unipilotVault4.balanceOf(user0.address);
+  //   const user1Lp = await unipilotVault4.balanceOf(user1.address);
+  //   const user2Lp = await unipilotVault4.balanceOf(user2.address);
+  //   const user3Lp = await unipilotVault4.balanceOf(user3.address);
+  //   const user4Lp = await unipilotVault4.balanceOf(user4.address);
 
-    await unipilotVault4.connect(user4).withdraw(user4Lp, user4.address, false);
-    await unipilotVault4.connect(user3).withdraw(user3Lp, user3.address, true);
-    await unipilotVault4.connect(user2).withdraw(user2Lp, user2.address, false);
-    await unipilotVault4.connect(user1).withdraw(user1Lp, user1.address, true);
-    await unipilotVault4.connect(user0).withdraw(user0Lp, user0.address, true);
-    await unipilotVault4.connect(owner).withdraw(ownerLp, owner.address, true);
+  //   await unipilotVault4.connect(user4).withdraw(user4Lp, user4.address, false);
+  //   await unipilotVault4.connect(user3).withdraw(user3Lp, user3.address, true);
+  //   await unipilotVault4.connect(user2).withdraw(user2Lp, user2.address, false);
+  //   await unipilotVault4.connect(user1).withdraw(user1Lp, user1.address, true);
+  //   await unipilotVault4.connect(user0).withdraw(user0Lp, user0.address, true);
+  //   await unipilotVault4.connect(owner).withdraw(ownerLp, owner.address, true);
 
-    reserves = await unipilotVault4.callStatic.getPositionDetails();
+  //   reserves = await unipilotVault4.callStatic.getPositionDetails();
 
-    console.log("res after-> ", reserves);
-    console.log("Balance WETH", {
-      WETH: await WETH.balanceOf(unipilotVault4.address),
-    });
-    console.log("Balance USDT", {
-      USDT: await USDT.balanceOf(unipilotVault4.address),
-    });
+  //   console.log("res after-> ", reserves);
+  //   console.log("Balance WETH", {
+  //     WETH: await WETH.balanceOf(unipilotVault4.address),
+  //   });
+  //   console.log("Balance USDT", {
+  //     USDT: await USDT.balanceOf(unipilotVault4.address),
+  //   });
 
-    // continue:
-  });
+  //   // continue:
+  // });
 
   // it("PILOT-WETH-3000", async () => {
   //   await generateFeeThroughSwap(swapRouter, owner, USDC, WETH, "100000", 3000);
