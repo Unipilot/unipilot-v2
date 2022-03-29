@@ -11,7 +11,6 @@ import "./libraries/UniswapLiquidityManagement.sol";
 import "./libraries/UniswapPoolActions.sol";
 
 import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
-import "hardhat/console.sol";
 
 contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
     using LowGasSafeMath for uint256;
@@ -234,9 +233,8 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
 
         transferFeesToIF(true, a.fees0, a.fees1);
 
-        int24 baseThreshold = getBaseThreshold();
+        int24 baseThreshold = tickSpacing * getBaseThreshold();
         (, a.currentTick, ) = pool.getSqrtRatioX96AndTick();
-        console.log("a.currentTick", uint24(a.currentTick));
 
         (a.tickLower, a.tickUpper) = UniswapLiquidityManagement.getBaseTicks(
             a.currentTick,
@@ -300,9 +298,6 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
                 baseThreshold,
                 tickSpacing
             );
-
-        console.log("ticksData.baseTickLower", uint24(ticksData.baseTickLower));
-        console.log("ticksData.baseTickUpper", uint24(ticksData.baseTickUpper));
 
         pool.mintLiquidity(
             ticksData.baseTickLower,
