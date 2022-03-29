@@ -359,6 +359,11 @@ contract UnipilotActiveVault is ERC20Permit, IUnipilotVault {
                 recipient
             );
 
+        if (recipient != address(this)) {
+            pay(address(token0), address(this), recipient, _balance0());
+            pay(address(token1), address(this), recipient, _balance1());
+        }
+
         _pulled = 2;
         emit PullLiquidity(reserves0, reserves1, fees0, fees1);
     }
