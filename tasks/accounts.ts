@@ -355,10 +355,19 @@ task("deploy-migrator", "Deploy Unipilot Migrator contract")
     //   v2Factory: cliArgs.v2Factory,
     //   ulm: cliArgs.ulm,
     // };
+
+    //rinkeby
+    // const args = {
+    //   positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    //   unipilot: "0x7c0C2de74929Fb8cAc9E42dF3594B727b39549Fb",
+    //   ulm: "0x1d85374b386CaBf80cabA0AD58e01B5319149840",
+    // };
+
+    //mainnet
     const args = {
       positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-      unipilot: "0x7c0C2de74929Fb8cAc9E42dF3594B727b39549Fb",
-      ulm: "0x1d85374b386CaBf80cabA0AD58e01B5319149840",
+      unipilot: "0xde5bF92E3372AA59C73Ca7dFc6CEc599E1B2b08C",
+      ulm: "0xa7979d0592ecfc59b082552828ff36209ec94b11",
     };
 
     console.log("Network");
