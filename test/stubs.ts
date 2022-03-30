@@ -2,13 +2,18 @@ import { deployContract } from "ethereum-waffle";
 import { Contract } from "ethers";
 import { UniswapV3Deployer } from "./UniswapV3Deployer";
 import WETH9Artifact from "uniswap-v3-deploy-plugin/src/util/WETH9.json";
+import MigratorArtifact from "../artifacts/contracts/UnipilotMigrator.sol/UnipilotMigrator.json";
 import UnipilotPassiveFactoryArtifact from "../artifacts/contracts/UnipilotPassiveFactory.sol/UnipilotPassiveFactory.json";
 import UnipilotActiveFactoryArtifact from "../artifacts/contracts/UnipilotActiveFactory.sol/UnipilotActiveFactory.json";
 import UniStrategyArtifact from "../artifacts/contracts/UnipilotStrategy.sol/UnipilotStrategy.json";
 import VaultArtifact from "../artifacts/contracts/UnipilotPassiveVault.sol/UnipilotPassiveVault.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
-import { UnipilotActiveFactory, UnipilotPassiveFactory } from "../typechain";
+import {
+  UnipilotActiveFactory,
+  UnipilotMigrator,
+  UnipilotPassiveFactory,
+} from "../typechain";
 
 export async function deployWETH9(deployer: any): Promise<Contract> {
   let weth9: Contract = await deployContract(deployer, WETH9Artifact, [], {
@@ -98,4 +103,19 @@ export async function deployActiveFactory(
     ],
   );
   return unipilotFactory as UnipilotActiveFactory;
+}
+
+export async function deployMigration(
+  deployer: any,
+  positionManager: any,
+  unipilot: any,
+  ulm: any,
+) {
+  let migration = await deployContract(deployer, MigratorArtifact, [
+    positionManager,
+    unipilot,
+    ulm,
+  ]);
+
+  return migration as UnipilotMigrator;
 }
