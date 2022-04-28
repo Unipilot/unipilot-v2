@@ -131,11 +131,11 @@ task(
     const args = {
       uniswapFactory: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
       governance: cliArgs.governance,
-      uniStrategy: "0x4b6d4d97398aDfE3897E871a94ca8eaf439FeA08",
-      indexFund: cliArgs.governance,
-      WETH: "0xc778417e063141139fce010982780140aa0cd5ab",
+      uniStrategy: "0xB7f7c5cea2b8b6138Ea3f669B2094B27dE2ec8d4",
+      indexFund: "0x95477F96F78EC38916B5457030387D844E886ab3",
+      WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
       indexFundPercentage: 10,
-      swapPercentage: 10,
+      swapPercentage: 2,
     };
 
     console.log("Network");

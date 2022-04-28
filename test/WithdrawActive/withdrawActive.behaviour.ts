@@ -78,8 +78,8 @@ export async function shouldBehaveLikeWithdrawActive(): Promise<void> {
       "UniLP",
     );
 
-    await USDC._mint(wallet.address, parseUnits("10000000", "18"));
-    await AAVE._mint(wallet.address, parseUnits("10000000", "18"));
+    await USDC._mint(wallet.address, parseUnits("1000", "18"));
+    await AAVE._mint(wallet.address, parseUnits("1000", "18"));
 
     await USDC._mint(other.address, parseUnits("400000000", "18"));
     await AAVE._mint(other.address, parseUnits("400000000", "18"));
@@ -384,7 +384,7 @@ export async function shouldBehaveLikeWithdrawActive(): Promise<void> {
 
       expect(user1LP).to.be.eq(0);
       expect(deposit[1]).to.be.eq(amount0.add(1));
-      expect(deposit[2]).to.be.eq(amount1.add(1));
+      expect(deposit[2]).to.be.eq(amount1);
     });
 
     it("before pulling liquidity should withdraw correctly", async () => {
@@ -415,7 +415,39 @@ export async function shouldBehaveLikeWithdrawActive(): Promise<void> {
 
       expect(user1LP).to.be.eq(0);
       expect(deposit[1]).to.be.eq(amount0.add(1));
-      expect(deposit[2]).to.be.eq(amount1.add(1));
+      expect(deposit[2]).to.be.eq(amount1);
+    });
+
+    it("after rerrange should withdraw correctly", async () => {
+      await vault.pullLiquidity(vault.address);
+
+      const unusedAmount0 = await token0Instance.balanceOf(vault.address);
+      const unusedAmount1 = await token1Instance.balanceOf(vault.address);
+
+      var reserves = await vault.callStatic.getPositionDetails();
+
+      await vault
+        .connect(other)
+        .deposit(
+          parseUnits("1000", "18"),
+          parseUnits("1000", "18"),
+          other.address,
+        );
+
+      await vault.rerange();
+
+      await vault
+        .connect(other)
+        .deposit(
+          parseUnits("1000", "18"),
+          parseUnits("1000", "18"),
+          other.address,
+        );
+
+      const unusedAmount0After = await token0Instance.balanceOf(vault.address);
+      const unusedAmount1After = await token1Instance.balanceOf(vault.address);
+
+      reserves = await vault.callStatic.getPositionDetails();
     });
   });
 }
