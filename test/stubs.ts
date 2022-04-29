@@ -6,6 +6,7 @@ import MigratorArtifact from "../artifacts/contracts/UnipilotMigrator.sol/Unipil
 import UnipilotPassiveFactoryArtifact from "../artifacts/contracts/UnipilotPassiveFactory.sol/UnipilotPassiveFactory.json";
 import UnipilotActiveFactoryArtifact from "../artifacts/contracts/UnipilotActiveFactory.sol/UnipilotActiveFactory.json";
 import UniStrategyArtifact from "../artifacts/contracts/UnipilotStrategy.sol/UnipilotStrategy.json";
+import UnipilotRouterArtifact from "../artifacts/contracts/UnipilotRouter.sol/UnipilotRouter.json";
 import VaultArtifact from "../artifacts/contracts/UnipilotPassiveVault.sol/UnipilotPassiveVault.json";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
@@ -118,4 +119,17 @@ export async function deployMigration(
   ]);
 
   return migration as UnipilotMigrator;
+}
+
+export async function deployRouter(
+  deployer: any,
+  unipilotActiveFactory: any,
+  unipilotPassiveFactory: any,
+): Promise<Contract> {
+  let router: Contract = await deployContract(
+    deployer,
+    UnipilotRouterArtifact,
+    [unipilotActiveFactory, unipilotPassiveFactory],
+  );
+  return router;
 }
