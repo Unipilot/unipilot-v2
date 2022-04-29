@@ -58,12 +58,6 @@ contract UnipilotRouter is PeripheryPayments {
         _;
     }
 
-    modifier onlyGovernance(address factory) {
-        (address governance, ) = _getProtocolDetails(factory);
-        require(msg.sender == governance, "NA");
-        _;
-    }
-
     function deposit(DepositParams memory params)
         external
         payable
