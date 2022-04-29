@@ -114,7 +114,7 @@ contract UnipilotRouter is PeripheryPayments {
         }
     }
 
-    function _getStrategy(address factory, bool isActive)
+    function _getStrategy(address pool, bool isActive)
         internal
         returns (address strategy)
     {
