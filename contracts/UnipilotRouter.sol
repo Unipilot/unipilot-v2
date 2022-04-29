@@ -32,8 +32,6 @@ contract UnipilotRouter is PeripheryPayments {
         uint256 amount0Desired;
         uint256 amount1Desired;
         address recipient;
-        uint256 amount0Min;
-        uint256 amount1Min;
         bool isActiveVault;
     }
 
@@ -47,14 +45,7 @@ contract UnipilotRouter is PeripheryPayments {
     }
 
     modifier checkDeviation(address pool, bool isActive) {
-        address strategy;
-        if (isActive) {
-            (, strategy) = _getProtocolDetails(unipilotActiveFactory);
-            IUnipilotStrategy(strategy).checkDeviation(address(pool));
-        } else {
-            (, strategy) = _getProtocolDetails(unipilotPassiveFactory);
-            IUnipilotStrategy(strategy).checkDeviation(address(pool));
-        }
+        _getStrategy(pool.isActive);
         _;
     }
 
@@ -123,8 +114,21 @@ contract UnipilotRouter is PeripheryPayments {
         }
     }
 
+    function _getStrategy(address factory, bool isActive)
+        internal
+        returns (address strategy)
+    {
+        if (isActive) {
+            (, strategy) = _getProtocolDetails(unipilotActiveFactory);
+            IUnipilotStrategy(strategy).checkDeviation(address(pool));
+        } else {
+            (, strategy) = _getProtocolDetails(unipilotPassiveFactory);
+            IUnipilotStrategy(strategy).checkDeviation(address(pool));
+        }
+    }
+
     function _getProtocolDetails(address _factory)
-        public
+        internal
         returns (address _governance, address _strategy)
     {
         (_governance, _strategy, , , ) = IUnipilotFactory(_factory)

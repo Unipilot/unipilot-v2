@@ -124,8 +124,6 @@ export async function shouldBehaveLikeRouterLive(): Promise<void> {
         parseUnits("100", "18"),
         parseUnits("10", "18"),
         owner.address,
-        parseUnits("1", "18"),
-        parseUnits("1", "18"),
         true,
       ]);
 
