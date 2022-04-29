@@ -45,7 +45,7 @@ contract UnipilotRouter is PeripheryPayments {
     }
 
     modifier checkDeviation(address pool, bool isActive) {
-        _getStrategy(pool.isActive);
+        _getStrategy(pool, isActive);
         _;
     }
 
