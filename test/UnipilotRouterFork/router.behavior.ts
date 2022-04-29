@@ -8,11 +8,12 @@ import ERC20Artifact from "../../artifacts/contracts/test/ERC20.sol/ERC20.json";
 import WETH9Artifact from "uniswap-v3-deploy-plugin/src/util/WETH9.json";
 import SwapRouterArtifact from "../../artifacts/contracts/test/SwapRouter.sol/SwapRouter.json";
 import AstWethArtifact from "../utils/astWeth.json";
-import { UniswapV3Pool } from "../../typechain";
+import { UnipilotRouter, UniswapV3Pool } from "../../typechain";
 
 import { generateFeeThroughSwap } from "../utils/SwapFunction/swapFork";
 import { deployRouter } from "../stubs";
 import { MaxUint128 } from "../../tasks/shared/utilities";
+import { parseUnits } from "ethers/lib/utils";
 
 export async function shouldBehaveLikeRouterLive(): Promise<void> {
   let WETH: Contract;
@@ -53,14 +54,14 @@ export async function shouldBehaveLikeRouterLive(): Promise<void> {
     });
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: ["0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2"],
+      params: ["0x28C6c06298d514Db089934071355E5743bf21d60"],
     });
     //Bot 0x1e13e5b5acbb0c3f0fde50fe7661fdf75df8f932
     //vitalik 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B
     //Hacker 0xB3764761E297D6f121e79C32A65829Cd1dDb4D32
     //Exchange 0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2
     owner = await ethers.getSigner(
-      "0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2",
+      "0x28C6c06298d514Db089934071355E5743bf21d60",
     );
 
     swapRouter = await ethers.getContractAt(
@@ -100,18 +101,36 @@ export async function shouldBehaveLikeRouterLive(): Promise<void> {
 
   it("AST Frontrun test", async () => {
     console.log("Deployed router address is: ", router.address);
-    console.log("User's AST balance :", await AST.balanceOf(owner.address));
 
     await WETH.connect(owner).approve(swapRouter.address, MaxUint128);
     await USDT.connect(owner).approve(swapRouter.address, MaxUint128);
 
-    await generateFeeThroughSwap(
-      swapRouter,
-      owner,
-      USDT,
-      WETH,
-      (1000).toString(),
-      3000,
-    );
+    await WETH.connect(owner).approve(router.address, MaxUint128);
+    await USDT.connect(owner).approve(router.address, MaxUint128);
+
+    console.log("User's WETH balance :", await WETH.balanceOf(owner.address));
+
+    // console.table(
+    //   await router.callStatic._getProtocolDetails(
+    //     "0x4b8e58D252ba251e044ec63125E83172ECa5118f",
+    //   ),
+    // );
+
+    await router
+      .connect(owner)
+      .deposit([
+        uniswapPool.address,
+        unipilotVault.address,
+        parseUnits("100", "18"),
+        parseUnits("10", "18"),
+        owner.address,
+        parseUnits("1", "18"),
+        parseUnits("1", "18"),
+        true,
+      ]);
+
+    console.log("User's AST balance :", await AST.balanceOf(owner.address));
+
+    console.log(router);
   });
 }
