@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { BigNumber, Contract, Wallet } from "ethers";
+import { BigNumber, constants, Contract, Wallet } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import {
   getMaxTick,
@@ -15,13 +15,13 @@ import {
   UnipilotActiveVault,
 } from "../../typechain";
 import { generateFeeThroughSwap } from "../utils/SwapFunction/swap";
-import { deployRouter } from "../stubs";
 
-export async function shouldBehaveLikeDepositActive(): Promise<void> {
+export async function shouldBehaveLikeRouterDeposit(): Promise<void> {
   const createFixtureLoader = waffle.createFixtureLoader;
   let uniswapV3Factory: Contract;
   let uniswapV3PositionManager: NonfungiblePositionManager;
   let uniStrategy: Contract;
+  let unipilotRouter: Contract;
   let unipilotFactory: Contract;
   let swapRouter: Contract;
   let unipilotVault: UnipilotActiveVault;
@@ -58,6 +58,7 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
       DAI,
       USDT,
       uniStrategy,
+      unipilotRouter,
       createVault,
     } = await loadFixture(unipilotActiveVaultFixture));
 
@@ -105,17 +106,17 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
     await DAI.approve(uniswapV3PositionManager.address, MaxUint256);
     await USDT.approve(uniswapV3PositionManager.address, MaxUint256);
 
-    await USDT.connect(wallet).approve(unipilotVault.address, MaxUint256);
-    await DAI.connect(wallet).approve(unipilotVault.address, MaxUint256);
+    await USDT.connect(wallet).approve(unipilotRouter.address, MaxUint256);
+    await DAI.connect(wallet).approve(unipilotRouter.address, MaxUint256);
 
-    await USDT.connect(bob).approve(unipilotVault.address, MaxUint256);
-    await DAI.connect(bob).approve(unipilotVault.address, MaxUint256);
+    await USDT.connect(bob).approve(unipilotRouter.address, MaxUint256);
+    await DAI.connect(bob).approve(unipilotRouter.address, MaxUint256);
 
-    await USDT.connect(carol).approve(unipilotVault.address, MaxUint256);
-    await DAI.connect(carol).approve(unipilotVault.address, MaxUint256);
+    await USDT.connect(carol).approve(unipilotRouter.address, MaxUint256);
+    await DAI.connect(carol).approve(unipilotRouter.address, MaxUint256);
 
-    await USDT.connect(user0).approve(unipilotVault.address, MaxUint256);
-    await DAI.connect(user0).approve(unipilotVault.address, MaxUint256);
+    await USDT.connect(user0).approve(unipilotRouter.address, MaxUint256);
+    await DAI.connect(user0).approve(unipilotRouter.address, MaxUint256);
 
     await USDT.connect(alice).approve(swapRouter.address, MaxUint256);
     await DAI.connect(alice).approve(swapRouter.address, MaxUint256);
@@ -157,6 +158,25 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
         gasLimit: "3000000",
       },
     );
+
+    // await uniswapV3PositionManager.connect(wallet).mint(
+    //   {
+    //     token0: token0,
+    //     token1: token1,
+    //     tickLower: getMinTick(60),
+    //     tickUpper: getMaxTick(60),
+    //     fee: 3000,
+    //     recipient: wallet.address,
+    //     amount0Desired: parseUnits("5", "18"),
+    //     amount1Desired: parseUnits("50000", "18"),
+    //     amount0Min: 0,
+    //     amount1Min: 0,
+    //     deadline: 2000000000,
+    //   },
+    //   {
+    //     gasLimit: "3000000",
+    //   },
+    // );
 
     await unipilotFactory.toggleWhitelistAccount(unipilotVault.address);
   });
@@ -212,13 +232,23 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
       expectedDaiBalanceBeforeDeposit.sub(token1ToBeDesposited); //1994875
 
     await unipilotVault.init();
-    await unipilotVault
+
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
+
+    await unipilotVault.withdraw(
+      await unipilotVault.balanceOf(wallet.address),
+      wallet.address,
+      false,
+    );
 
     const token0Balance: BigNumber = await token0Instance.balanceOf(
       wallet.address,
@@ -230,22 +260,28 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
 
   it("should successfully predict amounts after deposit", async () => {
     await unipilotVault.init();
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     await unipilotVault.readjustLiquidity();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     const token0MintedOnWallet0 = parseUnits("2000000", "18");
@@ -303,12 +339,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
   it("fees calculation", async () => {
     await unipilotVault.init();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("10000", "18"),
         parseUnits("80000", "18"),
         wallet.address,
+        true,
       );
 
     await generateFeeThroughSwap(
@@ -331,12 +370,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
   it("Should deposit proportionally with pool reserves", async () => {
     await unipilotVault.init();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     const positionDetails = await unipilotVault.callStatic.getPositionDetails();
@@ -353,24 +395,37 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
   it("should get lp according to share", async () => {
     await unipilotVault.init();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
-    await unipilotVault
+    await unipilotRouter
       .connect(bob)
-      .deposit(parseUnits("1000", "18"), parseUnits("1000", "18"), bob.address);
+      .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
+        parseUnits("1000", "18"),
+        parseUnits("1000", "18"),
+        bob.address,
+        true,
+      );
 
-    await unipilotVault
+    await unipilotRouter
       .connect(carol)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         carol.address,
+        true,
       );
 
     await generateFeeThroughSwap(
@@ -383,12 +438,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
 
     let positionDetails = await unipilotVault.callStatic.getPositionDetails();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(user0)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("4000", "18"),
         parseUnits("4000", "18"),
         user0.address,
+        true,
       );
 
     positionDetails = await unipilotVault.callStatic.getPositionDetails();
@@ -420,12 +478,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
   it("should pull liquidity successfully", async () => {
     await unipilotVault.init();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     const token0BalanceAfterDeposit: BigNumber = await token0Instance.balanceOf(
@@ -463,12 +524,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
 
   it("should push liquidity back successfully", async () => {
     await unipilotVault.init();
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     const token0BalanceAfterDeposit: BigNumber = await token0Instance.balanceOf(
@@ -515,12 +579,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
   it("should deposit after pull liquidity", async () => {
     await unipilotVault.init();
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     const token0BalanceAfterDeposit: BigNumber = await token0Instance.balanceOf(
@@ -556,12 +623,15 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
       token1VaultBalance,
     );
 
-    await unipilotVault
+    await unipilotRouter
       .connect(wallet)
       .deposit(
+        uniswapPool.address,
+        unipilotVault.address,
         parseUnits("1000", "18"),
         parseUnits("1000", "18"),
         wallet.address,
+        true,
       );
 
     positionDetails = await unipilotVault.callStatic.getPositionDetails();
@@ -583,4 +653,189 @@ export async function shouldBehaveLikeDepositActive(): Promise<void> {
 
     await unipilotVault.readjustLiquidity();
   });
+
+  // it("Price Inflation", async () => {
+  //   await unipilotVault.init();
+  //   // await unipilotRouter
+  //   //   .connect(wallet)
+  //   //   .deposit(
+  //   //     uniswapPool.address,
+  //   //     unipilotVault.address,
+  //   //     parseUnits("1000", "18"),
+  //   //     parseUnits("1000", "18"),
+  //   //     wallet.address,
+  //   //     true,
+  //   //   );
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+
+  //   let positionDetails = await unipilotVault.callStatic.getPositionDetails();
+
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     alice,
+  //     token0Instance,
+  //     token1Instance,
+  //     "1000",
+  //   );
+
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     alice,
+  //     token0Instance,
+  //     token1Instance,
+  //     "500",
+  //   );
+
+  //   await generateFeeThroughSwap(
+  //     swapRouter,
+  //     wallet,
+  //     token0Instance,
+  //     token1Instance,
+  //     "4000",
+  //   );
+
+  //   positionDetails = await unipilotVault.callStatic.getPositionDetails();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+  // });
+
+  // it("should successfully withdraw", async () => {
+  //   await unipilotVault.init();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+
+  //   await unipilotVault.readjustLiquidity();
+
+  //   const reserves = await unipilotVault.callStatic.getPositionDetails();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .withdraw(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       false,
+  //       true,
+  //     );
+
+  //   const userLpBalance = await unipilotVault.balanceOf(wallet.address);
+  //   let userToken0Balance = await token0Instance.balanceOf(wallet.address);
+  //   let userToken1Balance = await token1Instance.balanceOf(wallet.address);
+
+  //   expect(userLpBalance).to.be.eq(0);
+  // });
+
+  // it("fails if liquidity is zero", async () => {
+  //   await unipilotVault.init();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+
+  //   await unipilotVault.readjustLiquidity();
+  //   await expect(
+  //     unipilotRouter
+  //       .connect(wallet)
+  //       .withdraw(
+  //         uniswapPool.address,
+  //         unipilotVault.address,
+  //         0,
+  //         wallet.address,
+  //         false,
+  //         true,
+  //       ),
+  //   ).to.be.reverted;
+  // });
+
+  // it("fails if zero address", async () => {
+  //   await unipilotVault.init();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+
+  //   await unipilotVault.readjustLiquidity();
+  //   await expect(
+  //     unipilotRouter.withdraw(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       constants.AddressZero,
+  //       false,
+  //       true,
+  //     ),
+  //   ).to.be.reverted;
+  // });
+
+  // it("fails if not owner", async () => {
+  //   await unipilotVault.init();
+
+  //   await unipilotRouter
+  //     .connect(wallet)
+  //     .deposit(
+  //       uniswapPool.address,
+  //       unipilotVault.address,
+  //       parseUnits("1000", "18"),
+  //       parseUnits("1000", "18"),
+  //       wallet.address,
+  //       true,
+  //     );
+
+  //   await unipilotVault.readjustLiquidity();
+  //   await expect(
+  //     unipilotRouter
+  //       .connect(alice)
+  //       .withdraw(
+  //         uniswapPool.address,
+  //         unipilotVault.address,
+  //         parseUnits("1000", "18"),
+  //         other.address,
+  //         false,
+  //         true,
+  //       ),
+  //   ).to.be.reverted;
+  // });
 }

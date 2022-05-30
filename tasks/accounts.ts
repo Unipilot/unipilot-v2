@@ -72,7 +72,7 @@ task("deploy-unipilotFactory-active", "Deploy unipilot active factory contract")
   .setAction(async (cliArgs, { ethers, run, network }) => {
     await run("compile");
 
-    const signer = (await ethers.getSigners())[0];
+    const signer = (await ethers.getSigners())[1];
     console.log("Signer");
     console.log("  at", signer.address);
     console.log("  ETH", formatEther(await signer.getBalance()));
@@ -82,7 +82,7 @@ task("deploy-unipilotFactory-active", "Deploy unipilot active factory contract")
       governance: cliArgs.governance,
       uniStrategy: "0xB7f7c5cea2b8b6138Ea3f669B2094B27dE2ec8d4",
       indexFund: "0x95477F96F78EC38916B5457030387D844E886ab3",
-      WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      WETH: "0xc778417E063141139Fce010982780140Aa0cD5Ab",
       indexFundPercentage: 10,
     };
 
@@ -178,7 +178,7 @@ task("deploy-vault", "Deploy unipilot vault via the factory")
   .setAction(async (cliArgs, { ethers, run, network }) => {
     await run("compile");
 
-    const signer = (await ethers.getSigners())[0];
+    const signer = (await ethers.getSigners())[1];
     console.log("Signer");
     console.log("  at", signer.address);
     console.log("  ETH", formatEther(await signer.getBalance()));
@@ -298,6 +298,50 @@ task("verify-passive-vault", "Verify unipilot vault contract")
       constructorArguments: Object.values(args),
     });
   });
+
+task("deploy-router", "Deploy Unipilot Router Contract").setAction(
+  async (cliArgs, { ethers, run, network }) => {
+    await run("compile");
+
+    const signer = (await ethers.getSigners())[0];
+    console.log("Signer");
+    console.log("  at", signer.address);
+    console.log("  ETH", formatEther(await signer.getBalance()));
+
+    //rinkeby
+    // const args = {
+    //   activeFactory: "0x9e28cA2A20606a76609FD2108ec92d33355fF491",
+    //   passiveFactory: "0x422E3A41dACCb921d0493c81447e48e5cBf392bc",
+    // };
+
+    // mainnet;
+    const args = {
+      activeFactory: "0x4b8e58D252ba251e044ec63125E83172ECa5118f",
+      passiveFactory: "0x06c2AE330C57a6320b2de720971ebD09003C7a01",
+    };
+
+    console.log("Network");
+    console.log("   ", network.name);
+    console.log("Task Args");
+    console.log(args);
+
+    const unipilotRouter = await deployContract(
+      "UnipilotRouter",
+      await ethers.getContractFactory("UnipilotRouter"),
+      signer,
+      [args.activeFactory, args.passiveFactory],
+    );
+
+    await unipilotRouter.deployTransaction.wait(5);
+
+    delay(60000);
+
+    await run("verify:verify", {
+      address: unipilotRouter.address,
+      constructorArguments: [args.activeFactory, args.passiveFactory],
+    });
+  },
+);
 
 task("deploy-strategy", "Deploy unipilot strategy contract")
   .addParam("governance", "governer address")
